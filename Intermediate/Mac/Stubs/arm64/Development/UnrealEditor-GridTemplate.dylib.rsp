@@ -1,0 +1,61 @@
+-L/usr/lib/swift
+-arch arm64
+-isysroot "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+-target arm64-apple-macos14.00
+-dead_strip
+-dynamiclib
+-headerpad_max_install_names
+-current_version 4313.93.11
+-compatibility_version 5.6.0
+-rpath @loader_path/ -rpath @executable_path/
+-undefined dynamic_lookup
+-Wl,-no_fixup_chains
+-install_name "@rpath/UnrealEditor-GridTemplate.dylib"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/Module.GridTemplate.1.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/Module.GridTemplate.2.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/Module.GridTemplate.3.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridTemplatePlayerController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridTemplateCharacter.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridTemplateGameMode.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridTemplate.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatCharacter.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatPlayerController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatGameMode.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatLifeBar.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/AnimNotify_DoAttackTrace.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/AnimNotify_CheckChargedAttack.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/AnimNotify_CheckCombo.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatEnemySpawner.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatStateTreeUtility.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatEnemy.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/EnvQueryContext_Player.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatAIController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatLavaFloor.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatActivationVolume.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatDamageableBox.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatCheckpointVolume.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatDummy.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatDamageable.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatActivatable.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/CombatAttacker.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridPlayerController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridInteractionComponent.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/GridSubsystem.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/PlatformingPlayerController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/PlatformingCharacter.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/PlatformingGameMode.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/AnimNotify_EndDash.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingPlayerController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingCharacter.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingGameMode.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingCameraManager.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingUI.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingNPC.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingAIController.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingStateTreeUtility.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingPickup.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingJumpPad.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingMovingPlatform.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingSoftPlatform.cpp.o"
+"/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Build/Mac/arm64/UnrealEditor/Development/GridTemplate/SideScrollingInteractable.cpp.o"
+-o "/Users/despia/Documents/Unreal Projects/GridTemplate/Intermediate/Mac/Stubs/arm64/Development/UnrealEditor-GridTemplate.dylib"

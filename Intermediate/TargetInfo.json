@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "GridTemplate",
+			"Path": "../Source/GridTemplate.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "GridTemplateEditor",
+			"Path": "../Source/GridTemplateEditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}

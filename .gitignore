@@ -1,0 +1,71 @@
+# ======================== 
+# Unreal Engine 5.6 
+# ======================== 
+
+# IDE 
+.vs/ 
+.vscode/ 
+.idea/ 
+*.riderproject 
+*.suo 
+*.opensdf 
+*.sdf 
+*.VC.db 
+*.VC.opendb 
+.vsconfig 
+
+# 엔진이 생성하는 프로젝트 파일 (ubt/uat가 재생성) 
+*.xcodeproj 
+*.xcworkspace 
+*.sln 
+
+# 컴파일 산출물 
+*.slo 
+*.lo 
+*.o 
+*.obj 
+*.gch 
+*.pch 
+
+# 라이브러리/바이너리 
+*.so 
+*.dylib 
+*.dll 
+*.lai 
+*.la 
+*.a 
+*.lib 
+*.exe 
+*.out 
+*.app 
+*.ipa 
+
+# 언리얼 빌드 산출물 
+Binaries/* Build/* Intermediate/* DerivedDataCache/* ShaderCache/ 
+
+# Plugins (직접 작성한 플러그인 소스는 추적, 빌드 산출물만 제외) 
+Plugins/**/Binaries/* Plugins/**/Intermediate/* # 빌드 화이트리스트 예외 
+!Build/*/ 
+!Build/*/PakBlacklist*.txt 
+!Build/**/*.ico 
+Build/*/** # 저장/캐시 (로컬 전용) 
+Saved/* # Saved 하위 예외 (필요 시) 
+# !Saved/Config/ ← 팀 공유 설정이 있다면 예외 추가 
+
+# 맵 빌드 데이터 
+*_BuiltData.uasset 
+
+# 패키징 산출물 
+*.pak 
+*.ucas 
+*.utoc 
+
+# 소스 아트 (원본 바이너리, uasset으로 임포트 후 불필요) 
+SourceArt/**/*.png 
+SourceArt/**/*.tga 
+
+# OS 시스템 파일 
+.DS_Store 
+**/.DS_Store 
+Thumbs.db 
+Desktop.ini

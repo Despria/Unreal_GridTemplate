@@ -1,0 +1,8 @@
+{
+	"SourceFiles": [
+		"/Users/despia/Documents/Unreal Projects/GridTemplate/Source/GridTemplate/GridTemplate.Build.cs",
+		"/Users/despia/Documents/Unreal Projects/GridTemplate/Source/GridTemplate.Target.cs",
+		"/Users/despia/Documents/Unreal Projects/GridTemplate/Source/GridTemplateEditor.Target.cs"
+	],
+	"EngineVersion": "5.6.1"
+}

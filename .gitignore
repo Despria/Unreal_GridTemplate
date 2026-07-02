@@ -41,7 +41,11 @@
 *.ipa 
 
 # 언리얼 빌드 산출물 
-Binaries/* Build/* Intermediate/* DerivedDataCache/* ShaderCache/ 
+Binaries/*
+Build/* 
+Intermediate/* 
+DerivedDataCache/* 
+ShaderCache/ 
 
 # Plugins (직접 작성한 플러그인 소스는 추적, 빌드 산출물만 제외) 
 Plugins/**/Binaries/* Plugins/**/Intermediate/* # 빌드 화이트리스트 예외 

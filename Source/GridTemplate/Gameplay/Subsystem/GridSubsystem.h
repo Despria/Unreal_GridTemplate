@@ -11,59 +11,90 @@ struct FGridCellData
 {
 	GENERATED_BODY();
 	
+	// 셀의 그리드 상에서의 좌표 (X, Y, Z)
 	UPROPERTY(BlueprintReadWrite)
-	FVector2D GridCoord = FVector2D(0, 0);
+	FVector2D CellGridCoord = FVector2D(0, 0);
+	
+	// 셀 중심 위치의 월드 상에서의 좌표
+	UPROPERTY(BlueprintReadWrite)
+	FVector CellWorldLocation = FVector(0, 0, 0);
 	
 	UPROPERTY(BlueprintReadWrite)
-	FVector WorldCenter = FVector(0, 0, 0);
+	float HeightOffset = 0.f;
 	
 	UPROPERTY(BlueprintReadWrite)
-	bool bIsWalkable;
+	int32 MovementCost = 1;
 	
 	UPROPERTY(BlueprintReadWrite)
-	float Height = 0.f;
+	bool bIsWalkable = true;
+	
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsOccupied = false;
+	
+	UPROPERTY(BlueprintReadWrite)
+	TArray<FIntVector> ExtraMovableCells = TArray<FIntVector>();
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMoveableRangeUpdated, const TArray<FVector2D>&, Cells);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackRangeUpdated, const TArray<FVector2D>&, Cells);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPathUpdated, const TArray<FVector2D>&, Cells);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActiveLayerChanged, int32, NewLayer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectionCleared);
 
+// 새로 추가한 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInitializedGrid);
+
+/// GridSubsystem은 레벨, 데이터 에셋 등으로 존재할 그리드 관련 데이터를 통해, 
+/// 플레이 중인 레벨에 대한 논리적 그리드 데이터를 생성/저장/관리하며,
+/// A* 알고리즘을 통한 경로 계산 등을 담당하기 위한 클래스임.
+/// InitializeGrid()를 통해 논리적 그리드 데이터를 초기화하고, 초기화 완료 시 FOnInitializeGrid를 발행하여 그리드 데이터 생성을 알림.
+/// 이 데이터는 GridVisualizer와 같은 액터에서 사용하게 됨.
+
 /**
- * Grid Subsystem which manages Logical Grid and calculations about grid, ex) A* Pathfinding.
+ * Grid Subsystem which manages Logical Grid and calculations about grid, e.c, A* Pathfinding.
  */
-UCLASS()
+UCLASS(Blueprintable, Abstract)
 class GRIDTEMPLATE_API UGridSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	
 	virtual void Deinitialize() override;
 	
+	// 셀 한 칸의 크기 (정사각형)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	float CellSize = 100.f;
 	
+	// 그리드 내에서의 셀의 개수 (가로)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
-	int32 GridWidth;
-	
+	int32 GridWidth = 20;
+	// 그리드 내에서의 셀의 개수 (세로)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
-	int32 GridHeight;
+	int32 GridHeight = 20;
 	
+	// 그리드의 셀 생성 시작점
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	FVector GridOrigin = FVector(0, 0, 0);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	TMap<int32, float> LayerBaseHeights;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Grid")
+	int32 ActiveLayer = 0;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
 	void InitializeGrid();
 	virtual void InitializeGrid_Implementation();
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	FVector GridToWorldCenter(FVector2D GridCoord) const;
-	virtual FVector GridToWorldCenter_Implementation(FVector2D GridCoord) const;
+	FVector CellCoordToWorldLocation(FVector2D GridCoord) const;
+	virtual FVector CellCoordToWorldLocation_Implementation(FVector2D GridCoord) const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	FVector2D WorldToGrid(FVector WorldLocation) const;
-	virtual FVector2D WorldToGrid_Implementation(FVector WorldLocation) const;
+	FVector2D WorldLocationToCellCoord(FVector WorldLocation) const;
+	virtual FVector2D WorldLocationToCellCoord_Implementation(FVector WorldLocation) const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
 	bool IsValidCell(FVector2D GridCoord) const;
@@ -73,18 +104,36 @@ public:
 	TArray<FVector2D> GetAllCellCoords() const;
 	virtual TArray<FVector2D> GetAllCellCoords_Implementation() const;
 	
-	UPROPERTY(BlueprintAssignable, Category = "Grid")
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Layers")
+	void SetActiveLayer(int32 NewLayer);
+	virtual void SetActiveLayer_Implementation(int32 NewLayer);
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid|Layers")
+	void SetCellHeightOffset(FIntVector GridCoord, float NewHeightOffset);
+	
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
 	FOnMoveableRangeUpdated OnMoveableRangeUpdated;
 	
-	UPROPERTY(BlueprintAssignable, Category = "Grid")
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
 	FOnAttackRangeUpdated OnAttackRangeUpdated;
 	
-	UPROPERTY(BlueprintAssignable, Category = "Grid")
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
 	FOnPathUpdated OnPathUpdated;
 	
-	UPROPERTY(BlueprintAssignable, Category = "Grid")
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
 	FOnSelectionCleared OnSelectionCleared;
 	
-private:
-	TMap<FVector2D, FGridCellData> GridData;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
+	FOnActiveLayerChanged OnActiveLayerChanged;
+	
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
+	FOnInitializedGrid OnInitializedGrid;
+	
+	
+	// Private after Blueprint Test Finish
+	UPROPERTY(BlueprintReadWrite, Category = "Grid")
+	TMap<FIntVector, FGridCellData> GridCells;
+	
+	FVector CalculateWorldCenter(int32 X, int32 Y, int32 Layer, float HeightOffset) const;
+	bool IsValidLayer(int32 Layer) const;
 };

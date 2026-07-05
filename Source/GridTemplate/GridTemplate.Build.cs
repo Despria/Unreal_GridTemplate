@@ -21,7 +21,10 @@ public class GridTemplate : ModuleRules
 			"Slate"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			
+		});
 
 		PublicIncludePaths.AddRange(new string[] {
 			"GridTemplate",

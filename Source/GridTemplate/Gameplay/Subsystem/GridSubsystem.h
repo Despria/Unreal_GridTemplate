@@ -13,9 +13,9 @@ struct FGridCellData
 	
 	// 셀의 그리드 상에서의 좌표 (X, Y, Z)
 	UPROPERTY(BlueprintReadWrite)
-	FVector2D CellGridCoord = FVector2D(0, 0);
+	FIntVector CellGridCoord = FIntVector(0, 0, 0);
 	
-	// 셀 중심 위치의 월드 상에서의 좌표
+	// 셀 좌표 위치의 월드 상에서의 좌표
 	UPROPERTY(BlueprintReadWrite)
 	FVector CellWorldLocation = FVector(0, 0, 0);
 	
@@ -88,21 +88,28 @@ public:
 	void InitializeGrid();
 	virtual void InitializeGrid_Implementation();
 	
+	// 셀의 그리드 상에서의 좌표를 월드 좌표로 변환
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	FVector CellCoordToWorldLocation(FVector2D GridCoord) const;
-	virtual FVector CellCoordToWorldLocation_Implementation(FVector2D GridCoord) const;
+	FVector CellCoordToWorldLocation(FIntVector GridCoord) const;
+	virtual FVector CellCoordToWorldLocation_Implementation(FIntVector GridCoord) const;
+	
+	// 월드 좌표를 셀의 그리드 상에서의 좌표로 변환
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	FIntVector WorldLocationToCellCoord(FVector WorldLocation) const;
+	virtual FIntVector WorldLocationToCellCoord_Implementation(FVector WorldLocation) const;
+	
+	// 특정 셀의 중심 좌표를 반환
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	FVector CellCenterAsWorldLocation(FIntVector GridCoord);
+	virtual FVector CellCenterAsWorldLocation_Implementation(FIntVector GridCoord) const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	FVector2D WorldLocationToCellCoord(FVector WorldLocation) const;
-	virtual FVector2D WorldLocationToCellCoord_Implementation(FVector WorldLocation) const;
+	bool IsValidCell(FIntVector GridCoord) const;
+	virtual bool IsValidCell_Implementation(FIntVector GridCoord) const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	bool IsValidCell(FVector2D GridCoord) const;
-	virtual bool IsValidCell_Implementation(FVector2D GridCoord) const;
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	TArray<FVector2D> GetAllCellCoords() const;
-	virtual TArray<FVector2D> GetAllCellCoords_Implementation() const;
+	TArray<FIntVector> GetAllCellCoords() const;
+	virtual TArray<FIntVector> GetAllCellCoords_Implementation() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Layers")
 	void SetActiveLayer(int32 NewLayer);

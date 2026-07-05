@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Gameplay/ActorComponent/GridInteractionComponent.h"
+#include "InputMappingContext.h"
 #include "GridPlayerController.generated.h"
 
 /**
@@ -20,6 +21,19 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UGridInteractionComponent> GridInteractionComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> GridInputMappingContext;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	int32 GridInputMappingPriority = 0;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UInputAction> IA_MouseClick;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UInputAction> IA_MouseMove;
+	
 	
 protected:
 	virtual void BeginPlay() override;

@@ -19,24 +19,29 @@ void UGridSubsystem::InitializeGrid_Implementation()
 	
 }
 
-FVector2D UGridSubsystem::WorldLocationToCellCoord_Implementation(FVector WorldLocation) const
+FIntVector UGridSubsystem::WorldLocationToCellCoord_Implementation(FVector WorldLocation) const
 {
-	return FVector2D(0,0);
+	return FIntVector(0,0, 0);
 }
 
-FVector UGridSubsystem::CellCoordToWorldLocation_Implementation(FVector2D GridCoord) const
+FVector UGridSubsystem::CellCenterAsWorldLocation_Implementation(FIntVector GridCoord) const
 {
 	return FVector(0, 0, 0);
 }
 
-bool UGridSubsystem::IsValidCell_Implementation(FVector2D GridCoord) const
+FVector UGridSubsystem::CellCoordToWorldLocation_Implementation(FIntVector GridCoord) const
+{
+	return FVector(0, 0, 0);
+}
+
+bool UGridSubsystem::IsValidCell_Implementation(FIntVector GridCoord) const
 {
 	return true;
 }
 
-TArray<FVector2D> UGridSubsystem::GetAllCellCoords_Implementation() const
+TArray<FIntVector> UGridSubsystem::GetAllCellCoords_Implementation() const
 {
-	return TArray<FVector2D>();
+	return TArray<FIntVector>();
 }
 
 void UGridSubsystem::SetActiveLayer_Implementation(int32 NewLayer)

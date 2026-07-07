@@ -4,6 +4,7 @@
 #include "Gameplay/PlayerController/GridPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputActionValue.h"
 
 AGridPlayerController::AGridPlayerController() {
     GridInteractionComponent = CreateDefaultSubobject<UGridInteractionComponent>(TEXT("GridInteractionComponent"));
@@ -18,21 +19,15 @@ void AGridPlayerController::BeginPlay() {
         {
             if (GridInputMappingContext)
             {
-                // Priority: 값이 높을수록 우선순위 높음
-                // 여러 IMC가 동시에 등록될 경우 우선순위로 충돌 해결
                 Subsystem->AddMappingContext(GridInputMappingContext, GridInputMappingPriority);
             }
         }
     }
+    bShowMouseCursor = true;
 }
 
 void AGridPlayerController::SetupInputComponent() {
     Super::SetupInputComponent();
-
-    // ── BindAction: InputAction → 함수 연결 ──────────────
-    // AddMappingContext는 IMC 등록 담당 (BeginPlay에서 처리)
-    // BindAction은 "해당 InputAction 발생 시 어떤 함수를 호출하는가" 담당
-    // 두 역할이 다르므로 함께 사용
 
     UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
 
@@ -48,20 +43,19 @@ void AGridPlayerController::SetupInputComponent() {
     {
         EIC->BindAction(
             IA_MouseClick,
-            ETriggerEvent::Triggered,
+            ETriggerEvent::Started,
             GridInteractionComponent.Get(),
             &UGridInteractionComponent::PerformClick
         );
     }
-
-    if (IA_MouseMove)   
+    if (IA_MouseWheel)
     {
         EIC->BindAction(
-            IA_MouseMove,
-            ETriggerEvent::Triggered,
-            GridInteractionComponent.Get(),
-            &UGridInteractionComponent::PerformHovering
-        );
+                IA_MouseWheel,
+                ETriggerEvent::Triggered,
+                GridInteractionComponent.Get(),
+                &UGridInteractionComponent::PerformWheel
+            );
     }
 }
 

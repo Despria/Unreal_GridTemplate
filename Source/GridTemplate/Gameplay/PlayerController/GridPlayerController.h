@@ -32,7 +32,7 @@ public:
 	TObjectPtr<UInputAction> IA_MouseClick;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<UInputAction> IA_MouseMove;
+	TObjectPtr<UInputAction> IA_MouseWheel;
 	
 	
 protected:

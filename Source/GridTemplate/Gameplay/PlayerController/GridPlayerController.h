@@ -18,24 +18,28 @@ class GRIDTEMPLATE_API AGridPlayerController : public APlayerController
 	
 public:
 	AGridPlayerController();
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<UGridInteractionComponent> GridInteractionComponent;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> GridInputMappingContext;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	int32 GridInputMappingPriority = 0;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_MouseClick;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_MouseWheel;
 	
+	UFUNCTION(BlueprintCallable, Category = "Components")
+	UGridInteractionComponent* GetGridInteractionComponent();
 	
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	
+	
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess=true))
+	TObjectPtr<UGridInteractionComponent> GridInteractionComponent;
+	
 };

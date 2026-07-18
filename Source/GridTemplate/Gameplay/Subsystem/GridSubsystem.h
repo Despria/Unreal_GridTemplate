@@ -88,32 +88,44 @@ public:
 	void InitializeGrid();
 	virtual void InitializeGrid_Implementation();
 	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE float GetCellSize() { return CellSize; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE int32 GetGridWidth() { return GridWidth; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE int32 GetGridHeight() { return GridHeight; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE FVector GetGridOrigin() { return GridOrigin; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE int32 GetActiveLayer() { return ActiveLayer; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE int32 GetGridCellCoords(TArray<FIntVector>& CellCoords) { return GridCells.GetKeys(CellCoords); };
+	
 	// 셀의 그리드 상에서의 좌표를 월드 좌표로 변환
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	FVector CellCoordToWorldLocation(FIntVector GridCoord) const;
-	virtual FVector CellCoordToWorldLocation_Implementation(FIntVector GridCoord) const;
 	
 	// 월드 좌표를 셀의 그리드 상에서의 좌표로 변환
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	FIntVector WorldLocationToCellCoord(FVector WorldLocation) const;
-	virtual FIntVector WorldLocationToCellCoord_Implementation(FVector WorldLocation) const;
 	
 	// 특정 셀의 중심 좌표를 반환
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
-	FVector CellCenterAsWorldLocation(FIntVector GridCoord);
-	virtual FVector CellCenterAsWorldLocation_Implementation(FIntVector GridCoord) const;
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FVector CellCenterAsWorldLocation(FIntVector GridCoord) const;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	bool IsValidCell(FIntVector GridCoord) const;
-	virtual bool IsValidCell_Implementation(FIntVector GridCoord) const;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	TArray<FIntVector> GetAllCellCoords() const;
-	virtual TArray<FIntVector> GetAllCellCoords_Implementation() const;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Layers")
+	UFUNCTION(BlueprintCallable, Category = "Grid|Layers")
 	void SetActiveLayer(int32 NewLayer);
-	virtual void SetActiveLayer_Implementation(int32 NewLayer);
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid|Layers")
 	void SetCellHeightOffset(FIntVector GridCoord, float NewHeightOffset);
@@ -136,11 +148,9 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category = "Grid")
 	FOnInitializedGrid OnInitializedGrid;
 	
-	
-	// Private after Blueprint Test Finish
-	UPROPERTY(BlueprintReadWrite, Category = "Grid")
+private:
+	UPROPERTY(BlueprintReadWrite, Category = "Grid", meta = (AllowPrivateAccess=true))
 	TMap<FIntVector, FGridCellData> GridCells;
 	
-	FVector CalculateWorldCenter(int32 X, int32 Y, int32 Layer, float HeightOffset) const;
 	bool IsValidLayer(int32 Layer) const;
 };

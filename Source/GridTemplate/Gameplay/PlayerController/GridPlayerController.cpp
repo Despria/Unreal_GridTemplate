@@ -4,7 +4,6 @@
 #include "Gameplay/PlayerController/GridPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "InputActionValue.h"
 
 AGridPlayerController::AGridPlayerController() {
     GridInteractionComponent = CreateDefaultSubobject<UGridInteractionComponent>(TEXT("GridInteractionComponent"));
@@ -45,17 +44,21 @@ void AGridPlayerController::SetupInputComponent() {
             IA_MouseClick,
             ETriggerEvent::Started,
             GridInteractionComponent.Get(),
-            &UGridInteractionComponent::PerformClick
-        );
+            &UGridInteractionComponent::PerformMouseClick
+            );
     }
     if (IA_MouseWheel)
     {
         EIC->BindAction(
-                IA_MouseWheel,
-                ETriggerEvent::Triggered,
-                GridInteractionComponent.Get(),
-                &UGridInteractionComponent::PerformWheel
+            IA_MouseWheel,
+            ETriggerEvent::Triggered,
+            GridInteractionComponent.Get(),
+            &UGridInteractionComponent::PerformMouseWheel
             );
     }
 }
 
+UGridInteractionComponent* AGridPlayerController::GetGridInteractionComponent()
+{
+    return GridInteractionComponent;
+}

@@ -16,55 +16,74 @@ void UGridSubsystem::Deinitialize()
 
 void UGridSubsystem::InitializeGrid_Implementation()
 {
-	
+	for (int i = 0; i < GridHeight; i++)
+	{
+		for (int j = 0; j < GridWidth; j++)
+		{
+			FGridCellData GridCellData = FGridCellData();
+			GridCellData.CellGridCoord = FIntVector(j, i, ActiveLayer);
+			
+			// 추후 LayerBaseHeights 사용 시
+			// GridCellData.CellWorldLocation = GridOrigin + FVector(j * CellSize, i * CellSize, LayerBaseHeights[ActiveLayer]);
+			GridCellData.CellWorldLocation = GridOrigin + FVector(j * CellSize, i * CellSize, 0);
+			GridCells.Add(FIntVector(j, i, ActiveLayer), GridCellData);
+		}
+	}
+	OnInitializedGrid.Broadcast();
 }
 
-FIntVector UGridSubsystem::WorldLocationToCellCoord_Implementation(FVector WorldLocation) const
+FIntVector UGridSubsystem::WorldLocationToCellCoord(FVector WorldLocation) const
 {
 	// 월드 좌표를 그리드 좌표로 변환
-	int32 CoordX= FMath::FloorToInt((WorldLocation.X - GridOrigin.X) / CellSize);
-	int32 CoordY= FMath::FloorToInt((WorldLocation.Y - GridOrigin.Y) / CellSize);
+	// 언리얼의 좌표계는 Y축이 좌/우, X축이 앞/뒤를 가리키므로, 서로 변환해서 반환해야 함.
+	int32 CoordX= FMath::FloorToInt((WorldLocation.Y - GridOrigin.Y) / CellSize);
+	int32 CoordY= FMath::FloorToInt((WorldLocation.X - GridOrigin.X) / CellSize);
 	
-	return FIntVector(CoordY, CoordX, ActiveLayer);
+	return FIntVector(CoordX, CoordY, ActiveLayer);
 }
 
-FVector UGridSubsystem::CellCenterAsWorldLocation_Implementation(FIntVector GridCoord) const
-{
-	// 그리드의 중심 좌표를 월드 좌표로 변환
-	return FVector(0, 0, 0);
-}
-
-FVector UGridSubsystem::CellCoordToWorldLocation_Implementation(FIntVector GridCoord) const
+FVector UGridSubsystem::CellCenterAsWorldLocation(FIntVector GridCoord) const
 {
 	// 그리드 좌표를 월드 좌표로 변환
-	return FVector(0, 0, 0);
+	const float* BaseHeight = LayerBaseHeights.Find(GridCoord.Z);
+	const float LayerZ = BaseHeight ? *BaseHeight : 0.f;
+
+	return FVector(
+		// 언리얼의 좌표계는 Y축이 좌/우, X축이 앞/뒤를 가리키므로, 서로 변환해서 반환해야 함.
+		GridOrigin.X + (GridCoord.Y * CellSize) + (CellSize * 0.5f),
+		GridOrigin.Y + (GridCoord.X * CellSize) + (CellSize * 0.5f),
+		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
+	);
 }
 
-bool UGridSubsystem::IsValidCell_Implementation(FIntVector GridCoord) const
+FVector UGridSubsystem::CellCoordToWorldLocation(FIntVector GridCoord) const
+{
+	// 그리드 좌표를 월드 좌표로 변환
+	const float* BaseHeight = LayerBaseHeights.Find(GridCoord.Z);
+	const float LayerZ = BaseHeight ? *BaseHeight : 0.f;
+
+	return FVector(
+		// 언리얼의 좌표계는 Y축이 좌/우, X축이 앞/뒤를 가리키므로, 서로 변환해서 반환해야 함.
+		GridOrigin.X + (GridCoord.Y * CellSize),
+		GridOrigin.Y + (GridCoord.X * CellSize),
+		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
+	);
+}
+
+bool UGridSubsystem::IsValidCell(FIntVector GridCoord) const
 {
 	// 유효한 셀인지 반환
-	TArray<FGridCellData> GridCoords;
-	GridCells.GenerateValueArray(GridCoords);
-	
-	for (int i = 0; i < GridCoords.Num(); i++)
-	{
-		if (GridCoords[i].CellGridCoord == GridCoord) return true;
-	}
-	return false;
+	return GridCells.Contains(GridCoord);
 }
 
-TArray<FIntVector> UGridSubsystem::GetAllCellCoords_Implementation() const
+TArray<FIntVector> UGridSubsystem::GetAllCellCoords() const
 {
-	TArray<FGridCellData> GridCoords;
 	TArray<FIntVector> AllCellCoords;
-	for (int i = 0; i < GridCoords.Num(); i++)
-	{
-		AllCellCoords.Add(GridCoords[i].CellGridCoord);
-	}
+	GridCells.GetKeys(AllCellCoords);
 	return AllCellCoords;
 }
 
-void UGridSubsystem::SetActiveLayer_Implementation(int32 NewLayer)
+void UGridSubsystem::SetActiveLayer(int32 NewLayer)
 {
 	ActiveLayer = NewLayer;
 }
@@ -74,12 +93,7 @@ void UGridSubsystem::SetCellHeightOffset(FIntVector GridCoord, float NewHeightOf
 	
 }
 
-FVector UGridSubsystem::CalculateWorldCenter(int32 X, int32 Y, int32 Layer, float HeightOffset) const
-{
-	return FVector(0, 0, 0);
-}
-
 bool UGridSubsystem::IsValidLayer(int32 Layer) const
 {
-	return true;
+	return LayerBaseHeights.Find(Layer);
 }

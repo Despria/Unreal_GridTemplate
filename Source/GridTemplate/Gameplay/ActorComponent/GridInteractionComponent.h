@@ -8,8 +8,9 @@
 #include "GridInteractionComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellClicked, FIntVector, GridCoord);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellClickExited, FIntVector, GridCoord);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellHovered, FIntVector, GridCoord);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCellHoverExited);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellHoverExited, FIntVector, GridCoord);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUnitClicked, AActor*, HitActor);
 
 UCLASS(BlueprintType, Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -22,11 +23,11 @@ public:
 	UGridInteractionComponent();
 
 public:
-	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<APlayerController> PlayerController;
-	
 	UPROPERTY(BlueprintAssignable, Category="Interaction|Events")
 	FOnCellClicked OnCellClicked;
+	
+	UPROPERTY(BlueprintAssignable, Category="Interaction|Events")
+	FOnCellClickExited OnCellClickExited;
 	
 	UPROPERTY(BlueprintAssignable, Category="Interaction|Events")
 	FOnCellHovered OnCellHovered;
@@ -41,13 +42,13 @@ public:
 	float TraceDistance = 100000.f;
 	
 	UFUNCTION(BlueprintCallable, Category="Interaction|Events")
-	void PerformClick(const FInputActionValue& Value);
+	void PerformMouseClick(const FInputActionValue& Value);
 	
 	UFUNCTION(BlueprintCallable, Category="Interaction|Events")
-	void PerformHovering();
+	void PerformGridHovering();
 	
 	UFUNCTION(BlueprintCallable, Category="Interaction|Events")
-	void PerformWheel(const FInputActionValue& Value);
+	void PerformMouseWheel(const FInputActionValue& Value);
 
 protected:
 	// Called when the game starts
@@ -56,9 +57,14 @@ protected:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 private:
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess))
+	TObjectPtr<APlayerController> PlayerController;
+	
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess))
 	TObjectPtr<UGridSubsystem> GridSubsystem;
 	
-	bool PerformLineTrace(FHitResult& OutHitResult) const;
+	bool PerformGridLineTrace(FHitResult& OutHitResult) const;
 	FIntVector LastHoveredCell = FIntVector(INT_MIN, INT_MIN, INT_MIN);
+	FIntVector LastClickedCell = FIntVector(INT_MIN, INT_MIN, INT_MIN);;
 	FVector2D LastMousePosition = FVector2D::ZeroVector;
 };

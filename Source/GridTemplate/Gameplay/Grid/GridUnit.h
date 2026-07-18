@@ -14,13 +14,12 @@ class UGridUnit : public UInterface
 };
 
 /**
- * 
+ * Interface for Units exist on Grid
  */
 class GRIDTEMPLATE_API IGridUnit
 {
 	GENERATED_BODY()
 
-	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	// 현재 점유 중인 셀 좌표
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit")

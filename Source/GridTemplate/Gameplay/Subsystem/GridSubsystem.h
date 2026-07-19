@@ -84,9 +84,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Grid")
 	int32 ActiveLayer = 0;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid")
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
-	virtual void InitializeGrid_Implementation();
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	FORCEINLINE float GetCellSize() { return CellSize; };

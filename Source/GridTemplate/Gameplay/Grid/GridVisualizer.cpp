@@ -3,6 +3,8 @@
 
 #include "Gameplay/Grid/GridVisualizer.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/TextRenderComponent.h"
+#include "Engine/TextRenderActor.h"
 #include "Gameplay/Data/CellDisplayStateColorAsset.h"
 #include "Gameplay/PlayerController/GridPlayerController.h"
 #include "Gameplay/Grid/GridUnit.h"
@@ -55,7 +57,7 @@ void AGridVisualizer::BeginPlay()
 		}
 	}
 	
-	ISM_CellDisplayState->NumCustomDataFloats = NumCustomDataFloats;
+	ISM_CellDisplayState->SetNumCustomDataFloats(NumCustomDataFloats);
 	TArray<FIntVector> CellCoords;
 	for (int i = 0; i < GridSubsystem->GetGridCellCoords(CellCoords); i++)
 	{
@@ -157,10 +159,11 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 		CellDisplayColorTable->FindRow<FCellDisplayStateColor>(CellDisplayStateName, TEXT("CellDisplayStateColorTable")))
 	{
 		FColor Color = CellDisplayStateColor->CellDisplayColor;
+		UE_LOG(LogTemp, Warning, TEXT("Color -> R: %d, G: %d B: %d, A: %d"), Color.R, Color.G, Color.B, Color.A);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 0, Color.R, true);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 1, Color.G, true);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 2, Color.B, true);
-		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 3, Color.A, true);	
+		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 3, Color.A, true);
 	}
 }
 
@@ -230,19 +233,68 @@ void AGridVisualizer::UnbindFromGridManager()
 	
 }
 
-void AGridVisualizer::ShowDebugCoords_Implementation()
+void AGridVisualizer::InitializeDebugCoords_Implementation()
 {
+	ensure(GridSubsystem);
+	if (DebugCellCoords.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, 
+			TEXT("Debug Cell Coords TextRenderActors Array is Empty. Initialize Debug TextRenderActors..."))
+		
+		TArray<FIntVector> GridCellCoords;
+		GridSubsystem->GetGridCellCoords(GridCellCoords);
 	
+		for (int i = 0; i < GridCellCoords.Num(); i++)
+		{
+			FActorSpawnParameters ActorSpawnParams;
+			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			ActorSpawnParams.Owner = this;
+		
+			ATextRenderActor* DebugCellCoord = GetWorld()->SpawnActor<ATextRenderActor>(
+				GridSubsystem->CellCoordToWorldLocation(GridCellCoords[i]) 
+					+ FVector(GridSubsystem->GetCellSize() * 0.5f, GridSubsystem->GetCellSize() * 0.5f, 10.f), 
+				FRotator(90.f, 180.f, 0.f),
+				ActorSpawnParams);
+			DebugCellCoord->GetTextRender()->SetWorldSize(16.f);
+			DebugCellCoord->SetActorEnableCollision(false);
+			DebugCellCoord->GetTextRender()->Text = 
+				FText::FromString(FString::Format(TEXT("X = {0}\nY = {1}\nZ = {2}"),
+					{GridCellCoords[i].X, GridCellCoords[i].Y, GridCellCoords[i].Z }));
+			DebugCellCoords.Add(DebugCellCoord);
+		};
+		
+		bIsShowingDebugCoords = true;
+	}
+	
+}
+
+void AGridVisualizer::ToggleDebugCoords_Implementation()
+{
+	bIsShowingDebugCoords = !bIsShowingDebugCoords;
+	for (int i = 0; i < DebugCellCoords.Num(); i++)
+	{
+		DebugCellCoords[i]->SetActorHiddenInGame(bIsShowingDebugCoords);
+	}
 }
 
 void AGridVisualizer::ClearDebugCoords_Implementation()
 {
-	GridCellDisplayStates.Empty();
+	for (int i = DebugCellCoords.Num() - 1; i >= 0; i--)
+	{
+		DebugCellCoords.RemoveAt(i);
+	}
+	DebugCellCoords.Empty();
+	bIsShowingDebugCoords = false;
 }
 
-void AGridVisualizer::ShowDebugCoordsInEditor()
+void AGridVisualizer::InitializeDebugCoordsInEditor()
 {
-	ShowDebugCoords();
+	InitializeDebugCoords();
+}
+
+void AGridVisualizer::ToggleDebugCoordsInEditor()
+{
+	ToggleDebugCoords();
 }
 
 void AGridVisualizer::ClearDebugCoordsInEditor()

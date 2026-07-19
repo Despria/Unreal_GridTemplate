@@ -14,8 +14,10 @@ void UGridSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UGridSubsystem::InitializeGrid_Implementation()
+void UGridSubsystem::InitializeGrid()
 {
+	if (!GridCells.IsEmpty()) GridCells.Empty();
+	
 	for (int i = 0; i < GridHeight; i++)
 	{
 		for (int j = 0; j < GridWidth; j++)

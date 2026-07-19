@@ -7,8 +7,8 @@
 #include "Gameplay/Subsystem/GridSubsystem.h"
 #include "Gameplay/ActorComponent/GridInteractionComponent.h"
 #include "Gameplay/Data/CellDisplayStateData.h"
-#include "Gameplay/Data/CellDisplayStateColorAsset.h"
 #include "GridVisualizer.generated.h"
+
 UCLASS()
 class GRIDTEMPLATE_API AGridVisualizer : public AActor
 {
@@ -133,8 +133,12 @@ public:
     // PIE 모드: GridManager 데이터 사용
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
-    void ShowDebugCoords();
-    virtual void ShowDebugCoords_Implementation();
+    void InitializeDebugCoords();
+    virtual void InitializeDebugCoords_Implementation();
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void ToggleDebugCoords();
+    virtual void ToggleDebugCoords_Implementation();
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
     void ClearDebugCoords();
@@ -142,7 +146,10 @@ public:
 
     // 에디터 디테일 패널 버튼으로 노출 (PIE 없이 에디터에서 직접 실행)
     UFUNCTION(CallInEditor, Category = "Grid|Debug")
-    void ShowDebugCoordsInEditor();
+    void InitializeDebugCoordsInEditor();
+    
+    UFUNCTION(CallInEditor, Category = "Grid|Debug")
+    void ToggleDebugCoordsInEditor();
 
     UFUNCTION(CallInEditor, Category = "Grid|Debug")
     void ClearDebugCoordsInEditor();
@@ -167,10 +174,6 @@ private:
     UPROPERTY(EditAnywhere, meta=(AllowPrivateAccess=true), Category="Grid|ISM")
     int32 NumCustomDataFloats = 4;
 
-    // GridManager 델리게이트 바인딩/해제
-    void BindToGridManager();
-    void UnbindFromGridManager();
-
     // 상태표시가 전환된 Cell들을 관리하기 위한 Map
     // Click, Hover, MoveRange 등 특정 상태를 표시해야 하는 Cell이라면 여기 담아서 상태 갱신에 활용 (전체 그리드를 대상으로 순회하면 비효율적)
     // 어떠한 상태도 없어진 Cell이라면 Map에서 제거하면 됨.
@@ -179,4 +182,15 @@ private:
     
     UFUNCTION(BlueprintCallable, Category = "Grid|Visual", meta=(AllowPrivateAccess=true))
     void RefreshGridCellDisplayState(FIntVector CellCoord);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug", meta=(AllowPrivateAccess=true))
+    TArray<TObjectPtr<class ATextRenderActor>> DebugCellCoords;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug", meta=(AllowPrivateAccess=true))
+    bool bIsShowingDebugCoords = false;
+    
+    // GridManager 델리게이트 바인딩/해제
+    void BindToGridManager();
+    void UnbindFromGridManager();
+
 };

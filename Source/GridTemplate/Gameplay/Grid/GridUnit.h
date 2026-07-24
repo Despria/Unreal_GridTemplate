@@ -26,8 +26,11 @@ public:
 	FIntVector GetCellCoord() const;
 
 	// 이동력 (이동 불가 오브젝트는 0 반환)
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit")
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit|Movement")
 	int32 GetMovementPoints() const;
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit|Movement")
+	bool IsDiagonalMovable() const;
 
 	// 상호작용 가능 여부
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit")

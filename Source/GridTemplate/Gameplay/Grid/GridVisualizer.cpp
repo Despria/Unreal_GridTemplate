@@ -159,7 +159,6 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 		CellDisplayColorTable->FindRow<FCellDisplayStateColor>(CellDisplayStateName, TEXT("CellDisplayStateColorTable")))
 	{
 		FColor Color = CellDisplayStateColor->CellDisplayColor;
-		UE_LOG(LogTemp, Warning, TEXT("Color -> R: %d, G: %d B: %d, A: %d"), Color.R, Color.G, Color.B, Color.A);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 0, Color.R, true);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 1, Color.G, true);
 		ISM_CellDisplayState->SetCustomDataValue(InstanceId, 2, Color.B, true);
@@ -170,17 +169,19 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 void AGridVisualizer::OnShowMovableRangeHandler_Implementation(const TArray<FIntVector>& Cells)
 {
 	// 유닛 클릭 시 해당 유닛의 이동 가능 반경을 표시
+	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 이동 가능 범위를 표시
 }
 
 void AGridVisualizer::OnShowAttackRangeHandler_Implementation(const TArray<FIntVector>& Cells)
 {
 	// 유닛 공격 스킬 선택 시 공격 가능 반경을 표시
-	// 공격 가능 반경 내 선택을 하면 해당 스킬의 공격 범위를 표시하는 로직으로 이어져야 함.
+	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 공격 가능 범위를 표시
 }
 
 void AGridVisualizer::OnShowPathHandler_Implementation(const TArray<FIntVector>& Cells)
 {
 	// 유닛 이동 시 이동하는 경로를 표시
+	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 이동 경로인 Cell을 표시
 }
 
 // Called when mouse pointer clicked Cell
@@ -189,6 +190,7 @@ void AGridVisualizer::OnCellClickedHandler_Implementation(FIntVector CellCoord)
 	SetCellDisplayState(CellCoord, ECellDisplayState::Selected);
 }
 
+// Called When mouse pointer clicked another cell while already selecting one Cell
 void AGridVisualizer::OnCellClickExitedHandler_Implementation(FIntVector CellCoord)
 {
 	RemoveCellDisplayState(CellCoord, ECellDisplayState::Selected);
@@ -235,7 +237,12 @@ void AGridVisualizer::UnbindFromGridManager()
 
 void AGridVisualizer::InitializeDebugCoords_Implementation()
 {
-	ensure(GridSubsystem);
+	if (!GridSubsystem)
+	{
+		GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Red, TEXT("Grid Subsystem is NULL"));
+		UE_LOG(LogTemp, Warning, TEXT("Grid Subsystem is NULL"));
+		return;
+	}
 	if (DebugCellCoords.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, 
@@ -289,6 +296,12 @@ void AGridVisualizer::ClearDebugCoords_Implementation()
 
 void AGridVisualizer::InitializeDebugCoordsInEditor()
 {
+	if (!GridSubsystem)
+	{
+		GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Red, TEXT("Grid Subsystem is NULL"));
+		UE_LOG(LogTemp, Warning, TEXT("Grid Subsystem is NULL"));
+		return;
+	}
 	InitializeDebugCoords();
 }
 

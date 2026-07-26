@@ -9,7 +9,7 @@
 #include "GridPlayerController.generated.h"
 
 /**
- * 
+ * Player Controller for Grid Turn Based Battle
  */
 UCLASS()
 class GRIDTEMPLATE_API AGridPlayerController : public APlayerController

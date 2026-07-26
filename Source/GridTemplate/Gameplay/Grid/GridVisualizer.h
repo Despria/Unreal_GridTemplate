@@ -22,8 +22,6 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
-    // ── 공통 설정 ─────────────────────────────────────────
-    // GridSubsystem과 동일한 수치로 유지, 머티리얼/ISM/디버그 텍스트 모두 이 값을 기준으로 동작 (BeginPlay에서 별도 동기화 함)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Setup")
     float CellSize = 100.f;
 
@@ -57,12 +55,16 @@ public:
     // ── 게임용: ISM 갱신 함수 ────────────────────────────
     // GridManager 델리게이트에 바인딩
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
+    void OnInitializedGrid();
+    virtual void OnInitializedGrid_Implementation();
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
     void OnShowMovableRangeHandler(const TArray<FIntVector>& Cells);
     virtual void OnShowMovableRangeHandler_Implementation(const TArray<FIntVector>& Cells);
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
-    void OnShowAttackRangeHandler(const TArray<FIntVector>& Cells);
-    virtual void OnShowAttackRangeHandler_Implementation(const TArray<FIntVector>& Cells);
+    void OnShowEffectRangeHandler(const TArray<FIntVector>& Cells);
+    virtual void OnShowEffectRangeHandler_Implementation(const TArray<FIntVector>& Cells);
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
     void OnShowPathHandler(const TArray<FIntVector>& Cells);
@@ -114,6 +116,13 @@ public:
     // ── 디버그용 설정 ────────────────────────────────────
     // bShowDebugCoords: 기본값 false, 개발 중에만 ON
     // ActiveLayer에 해당하는 셀만 필터링하여 표시
+    
+    // 각 셀의 상태를 표시할 ISM
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|ISM")
+    TObjectPtr<UInstancedStaticMeshComponent> ISM_CellDebug;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid|Debug")
+    bool bShowDebugCells = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
     bool bShowDebugCoords = false;
@@ -131,6 +140,10 @@ public:
     // ShowDebugCoords: ActiveLayer 셀만 필터링하여 DrawDebugString
     // 에디터 모드: 자체 변수(CellSize/Width/Height/GridOrigin)로 직접 계산
     // PIE 모드: GridManager 데이터 사용
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void ToggleDebugCellCoords();
+    virtual void ToggleDebugCellCoords_Implementation();
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
     void InitializeDebugCoords();
@@ -174,9 +187,6 @@ private:
     UPROPERTY(EditAnywhere, meta=(AllowPrivateAccess=true), Category="Grid|ISM")
     int32 NumCustomDataFloats = 4;
 
-    // 상태표시가 전환된 Cell들을 관리하기 위한 Map
-    // Click, Hover, MoveRange 등 특정 상태를 표시해야 하는 Cell이라면 여기 담아서 상태 갱신에 활용 (전체 그리드를 대상으로 순회하면 비효율적)
-    // 어떠한 상태도 없어진 Cell이라면 Map에서 제거하면 됨.
     UPROPERTY(BLueprintReadWrite, Category="Grid|Visual", meta=(AllowPrivateAccess=true))
     TMap<FIntVector, FCellDisplayStateData> GridCellDisplayStates = TMap<FIntVector, FCellDisplayStateData>();
     
@@ -188,9 +198,4 @@ private:
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug", meta=(AllowPrivateAccess=true))
     bool bIsShowingDebugCoords = false;
-    
-    // GridManager 델리게이트 바인딩/해제
-    void BindToGridManager();
-    void UnbindFromGridManager();
-
 };

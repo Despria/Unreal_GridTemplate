@@ -7,7 +7,10 @@
 #include "Engine/TextRenderActor.h"
 #include "Gameplay/Data/CellDisplayStateColorAsset.h"
 #include "Gameplay/PlayerController/GridPlayerController.h"
+#include "Gameplay/Grid/GridSettings.h"
+#include "Gameplay/Grid/GridMath.h"
 #include "Gameplay/Grid/GridUnit.h"
+#include "Kismet/GameplayStatics.h"
 
 AGridVisualizer::AGridVisualizer()
 {
@@ -19,24 +22,24 @@ AGridVisualizer::AGridVisualizer()
 	GridMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GridMeshComponent->SetGenerateOverlapEvents(false);
 	
-	ISM_CellDisplayState = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ISM_MovementCell"));
+	ISM_CellDisplayState = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ISM_CellDisplayState"));
 	ISM_CellDisplayState->SetupAttachment(GetRootComponent());
 	ISM_CellDisplayState->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ISM_CellDisplayState->SetGenerateOverlapEvents(false);
+	
+	ISM_CellDebug = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ISM_Cell_Debug"));
+	ISM_CellDebug->SetupAttachment(GetRootComponent());
+	ISM_CellDebug->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ISM_CellDebug->SetGenerateOverlapEvents(false);
 }
 
 void AGridVisualizer::BeginPlay()
 {
-	// UGridSubsystem으로부터 관련된 정보 받아서 초기화
 	GridSubsystem = GetWorld()->GetSubsystem<UGridSubsystem>();
 	if (GridSubsystem)
 	{
+		GridSubsystem->OnInitializedGrid.AddDynamic(this, &AGridVisualizer::OnInitializedGrid);
 		GridSubsystem->OnActiveLayerChanged.AddDynamic(this, &AGridVisualizer::HandleActiveLayerChanged);
-		
-		CellSize = GridSubsystem->GetCellSize();
-		GridHeight = GridSubsystem->GetGridHeight();
-		GridWidth = GridSubsystem->GetGridWidth();
-		GridOrigin = GridSubsystem->GetGridOrigin();
 	}
 	
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -55,15 +58,6 @@ void AGridVisualizer::BeginPlay()
 			InteractionComp->OnUnitClicked.AddDynamic(
 				this, &AGridVisualizer::OnUnitClickedHandler);
 		}
-	}
-	
-	ISM_CellDisplayState->SetNumCustomDataFloats(NumCustomDataFloats);
-	TArray<FIntVector> CellCoords;
-	for (int i = 0; i < GridSubsystem->GetGridCellCoords(CellCoords); i++)
-	{
-		int32 InstanceID = ISM_CellDisplayState->AddInstance
-			(FTransform(GridSubsystem->CellCoordToWorldLocation(CellCoords[i]) + FVector(0, 0, ISM_ZOffset)));
-		GridCellDisplayStates.Add(CellCoords[i], FCellDisplayStateData(ECellDisplayState::Blank, InstanceID));
 	}
 }
 
@@ -87,6 +81,27 @@ void AGridVisualizer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 	}
 	Super::EndPlay(EndPlayReason);
+}
+
+void AGridVisualizer::OnInitializedGrid_Implementation()
+{
+	CellSize = GridSubsystem->GetCellSize();
+	GridHeight = GridSubsystem->GetGridHeight();
+	GridWidth = GridSubsystem->GetGridWidth();
+	GridOrigin = GridSubsystem->GetGridOrigin();
+	
+	ISM_CellDisplayState->SetNumCustomDataFloats(NumCustomDataFloats);
+	TArray<FIntVector> CellCoords;
+	for (int i = 0; i < GridSubsystem->GetGridCellCoords(CellCoords); i++)
+	{
+		int32 InstanceID = ISM_CellDisplayState->AddInstance
+		(FTransform(UGridMath::CellCoordToWorldLocation
+			(CellCoords[i], GridOrigin, CellSize, GridSubsystem->GetLayerBaseHeights())
+			+ FVector(0, 0, ISM_ZOffset)));
+		GridCellDisplayStates.Add(CellCoords[i], FCellDisplayStateData(ECellDisplayState::Blank, InstanceID));
+	}
+	
+	InitGridMesh();
 }
 
 void AGridVisualizer::InitGridMesh_Implementation()
@@ -129,7 +144,6 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 	FCellDisplayStateData* StateData = GridCellDisplayStates.Find(CellCoord);
 	if (!StateData) return;
 	
-	// 가장 우선순위가 높은 상태의 색
 	int32 InstanceId = StateData->InstanceID;
 	if (InstanceId == INDEX_NONE || InstanceId >= ISM_CellDisplayState->GetInstanceCount()) return;
 	
@@ -143,7 +157,6 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 		}
 	}
 	
-	// ECellDisplayState -> Get Name
 	UEnum* CellDisplayStateEnum = StaticEnum<ECellDisplayState>();
 	if (!CellDisplayStateEnum) return;
 	
@@ -172,7 +185,7 @@ void AGridVisualizer::OnShowMovableRangeHandler_Implementation(const TArray<FInt
 	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 이동 가능 범위를 표시
 }
 
-void AGridVisualizer::OnShowAttackRangeHandler_Implementation(const TArray<FIntVector>& Cells)
+void AGridVisualizer::OnShowEffectRangeHandler_Implementation(const TArray<FIntVector>& Cells)
 {
 	// 유닛 공격 스킬 선택 시 공격 가능 반경을 표시
 	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 공격 가능 범위를 표시
@@ -225,54 +238,75 @@ void AGridVisualizer::HandleActiveLayerChanged_Implementation(int32 NewLayer)
 	
 }
 
-void AGridVisualizer::BindToGridManager()
+void AGridVisualizer::ToggleDebugCellCoords_Implementation()
 {
+	bShowDebugCells = !bShowDebugCells;
+	if (!bShowDebugCells)
+	{
+		ISM_CellDebug->ClearInstances();
+		return;
+	}
 	
-}
-
-void AGridVisualizer::UnbindFromGridManager()
-{
+	AActor* Actor = UGameplayStatics::GetActorOfClass(GetWorld(), AGridSettings::StaticClass());
+	if (!Actor)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Grid Settings is NULL"));
+		UE_LOG(LogTemp, Warning, TEXT("Grid Settings is NULL"));
+		return;
+	}
 	
+	AGridSettings* GridSettings = Cast<AGridSettings>(Actor);
+	TMap<FIntVector, FGridCellData> GridCellData = GridSettings->GetGridCellData();
+	
+	TArray<FIntVector> GridCellCoords;
+	GridCellData.GenerateKeyArray(GridCellCoords);
+	
+	for (int i = 0; i < GridCellCoords.Num(); i++)
+	{
+		int32 InstanceID = ISM_CellDebug->AddInstance
+		(FTransform(UGridMath::CellCoordToWorldLocation
+			(GridCellCoords[i], GridSettings->GetGridOrigin(), GridSettings->GetCellSize(), GridSettings->GetLayerBaseHeights())
+			+ FVector(0, 0, ISM_ZOffset)));
+	};
 }
 
 void AGridVisualizer::InitializeDebugCoords_Implementation()
 {
-	if (!GridSubsystem)
+	AActor* Actor = UGameplayStatics::GetActorOfClass(GetWorld(), AGridSettings::StaticClass());
+	if (!Actor)
 	{
-		GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Red, TEXT("Grid Subsystem is NULL"));
-		UE_LOG(LogTemp, Warning, TEXT("Grid Subsystem is NULL"));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Grid Settings is NULL"));
+		UE_LOG(LogTemp, Warning, TEXT("Grid Settings is NULL"));
 		return;
 	}
-	if (DebugCellCoords.IsEmpty())
+	
+	AGridSettings* GridSettings = Cast<AGridSettings>(Actor);
+	TMap<FIntVector, FGridCellData> GridCellData = GridSettings->GetGridCellData();
+	
+	TArray<FIntVector> GridCellCoords;
+	GridCellData.GenerateKeyArray(GridCellCoords);
+	
+	DebugCellCoords.Empty();
+	for (int i = 0; i < GridCellCoords.Num(); i++)
 	{
-		UE_LOG(LogTemp, Warning, 
-			TEXT("Debug Cell Coords TextRenderActors Array is Empty. Initialize Debug TextRenderActors..."))
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		ActorSpawnParams.Owner = this;
 		
-		TArray<FIntVector> GridCellCoords;
-		GridSubsystem->GetGridCellCoords(GridCellCoords);
-	
-		for (int i = 0; i < GridCellCoords.Num(); i++)
-		{
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			ActorSpawnParams.Owner = this;
-		
-			ATextRenderActor* DebugCellCoord = GetWorld()->SpawnActor<ATextRenderActor>(
-				GridSubsystem->CellCoordToWorldLocation(GridCellCoords[i]) 
-					+ FVector(GridSubsystem->GetCellSize() * 0.5f, GridSubsystem->GetCellSize() * 0.5f, 10.f), 
-				FRotator(90.f, 180.f, 0.f),
-				ActorSpawnParams);
-			DebugCellCoord->GetTextRender()->SetWorldSize(16.f);
-			DebugCellCoord->SetActorEnableCollision(false);
-			DebugCellCoord->GetTextRender()->Text = 
-				FText::FromString(FString::Format(TEXT("X = {0}\nY = {1}\nZ = {2}"),
-					{GridCellCoords[i].X, GridCellCoords[i].Y, GridCellCoords[i].Z }));
-			DebugCellCoords.Add(DebugCellCoord);
-		};
-		
-		bIsShowingDebugCoords = true;
-	}
-	
+		ATextRenderActor* DebugCellCoord = GetWorld()->SpawnActor<ATextRenderActor>(
+			UGridMath::CellCenterToWorldLocation
+				(GridCellCoords[i] + FIntVector(0, 0, 2.f), 
+					GridSettings->GetGridOrigin(), GridSettings->GetCellSize(), GridSettings->GetLayerBaseHeights()), 
+			FRotator(90.f, 180.f, 0.f),
+			ActorSpawnParams);
+			
+		DebugCellCoord->GetTextRender()->SetWorldSize(16.f);
+		DebugCellCoord->SetActorEnableCollision(false);
+		DebugCellCoord->GetTextRender()->Text = 
+			FText::FromString(FString::Format(TEXT("X = {0}\nY = {1}\nZ = {2}"),
+				{GridCellCoords[i].X, GridCellCoords[i].Y, GridCellCoords[i].Z }));
+		DebugCellCoords.Add(DebugCellCoord);
+	};
 }
 
 void AGridVisualizer::ToggleDebugCoords_Implementation()
@@ -296,12 +330,6 @@ void AGridVisualizer::ClearDebugCoords_Implementation()
 
 void AGridVisualizer::InitializeDebugCoordsInEditor()
 {
-	if (!GridSubsystem)
-	{
-		GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Red, TEXT("Grid Subsystem is NULL"));
-		UE_LOG(LogTemp, Warning, TEXT("Grid Subsystem is NULL"));
-		return;
-	}
 	InitializeDebugCoords();
 }
 

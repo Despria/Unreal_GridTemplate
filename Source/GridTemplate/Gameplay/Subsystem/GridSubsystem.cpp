@@ -1,8 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Gameplay/Subsystem/GridSubsystem.h"
+#include "Gameplay/Grid/GridSettings.h"
 #include "Algo/Reverse.h"
+#include "Kismet/GameplayStatics.h"
 
 void UGridSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -17,73 +18,21 @@ void UGridSubsystem::Deinitialize()
 
 void UGridSubsystem::InitializeGrid()
 {
-	if (!GridCells.IsEmpty()) GridCells.Empty();
-	
-	for (int i = 0; i < GridYLength; i++)
+	// AGridSettings로부터 정보 읽어와서 초기화 하도록 수정해야 함.
+	if (AActor* Actor = UGameplayStatics::GetActorOfClass(GetWorld(), AGridSettings::StaticClass()))
 	{
-		for (int j = 0; j < GridXLength; j++)
-		{
-			FGridCellData GridCellData = FGridCellData();
-			GridCellData.CellGridCoord = FIntVector(j, i, ActiveLayer);
-			
-			// 추후 LayerBaseHeights 사용 시
-			// GridCellData.CellWorldLocation = GridOrigin + FVector(j * CellSize, i * CellSize, LayerBaseHeights[ActiveLayer]);
-			GridCellData.CellWorldLocation = GridOrigin + FVector(j * CellSize, i * CellSize, 0);
-			GridCells.Add(FIntVector(j, i, ActiveLayer), GridCellData);
-		}
+		AGridSettings* GridSettings = Cast<AGridSettings>(Actor);
+		CellSize = GridSettings->GetCellSize();
+		GridXLength = GridSettings->GetGridXLength();
+		GridYLength = GridSettings->GetGridYLength();
+		GridOrigin = GridSettings->GetGridOrigin();
+		GridCells = GridSettings->GetGridCellData();
+		LayerBaseHeights = GridSettings->GetLayerBaseHeights();
+		OnInitializedGrid.Broadcast();
 	}
-	OnInitializedGrid.Broadcast();
 }
 
 #pragma region Cell Properties
-/**
- * Switch World Location into Cell Coordinate.
- * Unreal World Coordinate -> X Axis = Front/Back, Y Axis = Left/Right,
- * Need to Swap X <-> Y to make it looks like Standard X/Y Axis Coordinate.
- * @param WorldLocation FVector World Location to convert into Cell Coordinate.
- * @return CellCoord FIntVector
- */
-FIntVector UGridSubsystem::WorldLocationToCellCoord(FVector WorldLocation) const
-{
-	int32 CoordX= FMath::FloorToInt((WorldLocation.Y - GridOrigin.Y) / CellSize);
-	int32 CoordY= FMath::FloorToInt((WorldLocation.X - GridOrigin.X) / CellSize);
-	
-	return FIntVector(CoordX, CoordY, ActiveLayer);
-}
-
-/**
- * Switch Cell Coordinate into World Location.
- * Unreal World Coordinate -> X Axis = Front/Back, Y Axis = Left/Right,
- * Need to Swap X <-> Y to make it looks like Unreal X/Y Axis Coordinate.
- * @param GridCoord FIntVector Cell Coordinate to convert into World Location.
- * @return WorldLocation FVector
- */
-FVector UGridSubsystem::CellCenterAsWorldLocation(FIntVector GridCoord) const
-{
-	const float* BaseHeight = LayerBaseHeights.Find(GridCoord.Z);
-	const float LayerZ = BaseHeight ? *BaseHeight : 0.f;
-
-	return FVector(
-		GridOrigin.X + (GridCoord.Y * CellSize) + (CellSize * 0.5f),
-		GridOrigin.Y + (GridCoord.X * CellSize) + (CellSize * 0.5f),
-		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
-	);
-}
-
-FVector UGridSubsystem::CellCoordToWorldLocation(FIntVector GridCoord) const
-{
-	// 그리드 좌표를 월드 좌표로 변환
-	const float* BaseHeight = LayerBaseHeights.Find(GridCoord.Z);
-	const float LayerZ = BaseHeight ? *BaseHeight : 0.f;
-
-	return FVector(
-		// 언리얼의 좌표계는 Y축이 좌/우, X축이 앞/뒤를 가리키므로, 서로 변환해서 반환해야 함.
-		GridOrigin.X + (GridCoord.Y * CellSize),
-		GridOrigin.Y + (GridCoord.X * CellSize),
-		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
-	);
-}
-
 bool UGridSubsystem::IsValidCell(FIntVector GridCoord) const
 {
 	return GridCells.Contains(GridCoord);
@@ -194,8 +143,7 @@ TArray<FIntVector> UGridSubsystem::AlphaStarPathfinding(FIntVector StartCoord, F
  * @param bIsDiagonal Defines whether it is Euclidean Distance(Allow Diagonal Movement) or Manhattan Distance(Only Straight Movement).
  * @return Movable Range. Empty if no movable range found.
  */
-TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint,
-                                                             bool bIsDiagonal)
+TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint, bool bIsDiagonal)
 {
 	TMap<FIntVector, FGridCellPathfindData> PathfindCells = TMap<FIntVector, FGridCellPathfindData>();
 	TSet<FIntVector> OpenCellCoords = TSet<FIntVector>();
@@ -363,6 +311,7 @@ TArray<FIntVector> UGridSubsystem::GetEffectRangeCellCoords(FEffectRangeData& Ef
 	EEffectRangeType RangeType = EffectRangeData.EffectRangeType;
 	switch (RangeType)
 	{
+		// Cross, Random은 현재 매개변수 하나가 하드코딩 되어 있어 수정 작업 필요.
 		case EEffectRangeType::Point:
 			{
 				TArray<FIntVector> EffectRangeCellCoords;
@@ -374,10 +323,14 @@ TArray<FIntVector> UGridSubsystem::GetEffectRangeCellCoords(FEffectRangeData& Ef
 				EffectRangeData.EffectXLength, EffectRangeData.EffectRangeDirection);
 		case EEffectRangeType::Square:
 			return GetSquareEffectRange(EffectRangeData.EffectOriginCellCoord, EffectRangeData.EffectXLength);
+		case EEffectRangeType::Diamond:
+			return GetDiamondEffectRange(EffectRangeData.EffectOriginCellCoord, EffectRangeData.EffectXLength);
 		case EEffectRangeType::Star:
 			return GetStarEffectRange(EffectRangeData.EffectOriginCellCoord, EffectRangeData.EffectXLength);
 		case EEffectRangeType::Cross:
 			return GetCrossEffectRange(EffectRangeData.EffectOriginCellCoord, EffectRangeData.EffectXLength, false);
+		case EEffectRangeType::Random:
+			return GetRandomEffectRange(EffectRangeData.EffectOriginCellCoord, EffectRangeData.EffectXLength, 10);
 		default:
 			UE_LOG(LogTemp, Warning, TEXT("Unknown EffectRangeType"));
 			return TArray<FIntVector>();
@@ -388,14 +341,12 @@ TArray<FIntVector> UGridSubsystem::GetLineEffectRange(FIntVector OriginCellCoord
 {
 	TArray<FIntVector> EffectRangeCellCoords;
 	
-	const int32 CellDistance = FMath::Floor(EffectDistance / 2);
-	FIntVector CellDirection = EffectRangeDirection == EEffectRangeDirection::Vertical ? 
-		FIntVector(0, 1, 0) : FIntVector(1, 0, 0); 
-	
 	// 짝수일 때 양의 방향(오른쪽/위쪽)에 한 칸을 더 배정
 	const int32 LowerOffset = -((EffectDistance - 1) / 2);
 	const int32 UpperOffset = EffectDistance / 2;
-
+	FIntVector CellDirection = EffectRangeDirection == EEffectRangeDirection::Vertical ? 
+		FIntVector(0, 1, 0) : FIntVector(1, 0, 0); 
+	
 	for (int32 i = LowerOffset; i <= UpperOffset; i++)
 	{
 		const FIntVector Coord = OriginCellCoord + CellDirection * i;

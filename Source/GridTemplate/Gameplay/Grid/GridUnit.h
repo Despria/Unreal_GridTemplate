@@ -7,7 +7,7 @@
 #include "GridUnit.generated.h"
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI, Blueprintable)
+UINTERFACE(MinimalAPI, BlueprintType)
 class UGridUnit : public UInterface
 {
 	GENERATED_BODY()
@@ -22,17 +22,17 @@ class GRIDTEMPLATE_API IGridUnit
 
 public:
 	// 현재 점유 중인 셀 좌표
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit")
-	FIntVector GetCellCoord() const;
+	UFUNCTION(Category = "Grid|Unit")
+	virtual FIntVector GetCellCoord() const;
 
 	// 이동력 (이동 불가 오브젝트는 0 반환)
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit|Movement")
-	int32 GetMovementPoints() const;
+	UFUNCTION(Category = "Grid|Unit|Movement")
+	virtual int32 GetMovementPoints() const;
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit|Movement")
-	bool IsDiagonalMovable() const;
+	UFUNCTION(Category = "Grid|Unit|Movement")
+	virtual bool IsDiagonalMovable() const;
 
 	// 상호작용 가능 여부
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "GridUnit")
-	bool IsInteractable() const;
+	UFUNCTION(Category = "Grid|Unit")
+	virtual bool IsInteractable() const;
 };

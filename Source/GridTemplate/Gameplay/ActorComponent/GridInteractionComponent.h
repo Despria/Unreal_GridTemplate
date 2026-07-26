@@ -13,6 +13,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellHovered, FIntVector, GridCoor
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCellHoverExited, FIntVector, GridCoord);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUnitClicked, AActor*, HitActor);
 
+/**
+ * Attached to GridPlayerController, define functions for interaction with Grid.
+ */
 UCLASS(BlueprintType, Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class GRIDTEMPLATE_API UGridInteractionComponent : public UActorComponent
 {
@@ -51,9 +54,7 @@ public:
 	void PerformMouseWheel(const FInputActionValue& Value);
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
-	
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 private:

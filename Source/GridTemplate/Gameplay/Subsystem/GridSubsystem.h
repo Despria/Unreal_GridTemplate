@@ -4,37 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Gameplay/Data/GridCellData.h"
 #include "GridSubsystem.generated.h"
-
-USTRUCT(BlueprintType)
-struct FGridCellData
-{
-	GENERATED_BODY();
-	
-	// X, Y, Z Coordinate of Cell
-	UPROPERTY(BlueprintReadWrite)
-	FIntVector CellGridCoord = FIntVector(0, 0, 0);
-	
-	// World Vector Location of Cell
-	UPROPERTY(BlueprintReadWrite)
-	FVector CellWorldLocation = FVector(0, 0, 0);
-	
-	UPROPERTY(BlueprintReadWrite)
-	float HeightOffset = 0.f;
-	
-	// MovementCost Minimum = 10
-	UPROPERTY(BlueprintReadWrite)
-	int32 MovementCost = 10;
-	
-	UPROPERTY(BlueprintReadWrite)
-	bool bIsWalkable = true;
-	
-	UPROPERTY(BlueprintReadWrite)
-	bool bIsOccupied = false;
-	
-	UPROPERTY(BlueprintReadWrite)
-	TArray<FIntVector> ExtraMovableCells = TArray<FIntVector>();
-};
 
 USTRUCT(BlueprintType)
 struct FGridCellPathfindData
@@ -45,13 +16,13 @@ struct FGridCellPathfindData
 	FIntVector CellCoord = FIntVector(INT_MIN, INT_MIN, INT_MIN);
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 GCost;
+	int32 GCost = 0;
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 HCost;
+	int32 HCost = 0;
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 FCost;
+	int32 FCost = 0;
 	
 	UPROPERTY(BlueprintReadWrite)
 	TArray<FIntVector> NeighborCells = TArray<FIntVector>();
@@ -66,9 +37,10 @@ enum class EEffectRangeType : uint8
 	Point = 0,
 	Line = 1,
 	Square = 2,
-	Star = 3,
-	Cross = 4,
-	Random = 5
+	Diamond = 3,
+	Star = 4,
+	Cross = 5,
+	Random = 6
 };
 
 UENUM(Blueprintable)
@@ -93,10 +65,16 @@ struct FEffectRangeData
 	FIntVector EffectOriginCellCoord = FIntVector(0, 0, 0);
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 EffectXLength;
+	int32 EffectXLength = 1;
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 EffectYLength;
+	int32 EffectYLength = 1;
+	
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsDiagonal = false;
+	
+	UPROPERTY(BlueprintReadWrite)
+	int32 RandomCount = 1;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInitializedGrid);
@@ -107,7 +85,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActiveLayerChanged, int32, NewLay
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectionCleared);
 
 /**
- * Grid Subsystem which manages Logical Grid and calculations about grid, e.g., A* Pathfinding.
+ * Grid Subsystem which manages logical grid and calculations about grid which depends on runtime, e.g., A* Pathfinding.
  */
 UCLASS(Blueprintable, Abstract)
 class GRIDTEMPLATE_API UGridSubsystem : public UWorldSubsystem
@@ -122,23 +100,19 @@ public:
 	void InitializeGrid();
 
 #pragma region Cell Properties
-	// 셀 한 칸의 크기 (정사각형)
+
+	#pragma region Cell Properties From GridSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	float CellSize = 100.f;
-	
-	// 그리드 내에서의 셀의 개수 (가로)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	int32 GridXLength = 20;
-	// 그리드 내에서의 셀의 개수 (세로)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	int32 GridYLength = 20;
-	
-	// Origin of Grid in World
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	FVector GridOrigin = FVector(0, 0, 0);
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
-	TMap<int32, float> LayerBaseHeights;
+	TMap<int32, float> LayerBaseHeights = TMap<int32, float>{};
+	#pragma endregion 
 	
 	UPROPERTY(BlueprintReadWrite, Category = "Grid")
 	int32 ActiveLayer = 0;
@@ -159,16 +133,10 @@ public:
 	FORCEINLINE int32 GetActiveLayer() { return ActiveLayer; };
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid")
+	FORCEINLINE TMap<int32, float> GetLayerBaseHeights() { return LayerBaseHeights; };
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	FORCEINLINE int32 GetGridCellCoords(TArray<FIntVector>& CellCoords) { return GridCells.GetKeys(CellCoords); };
-	
-	UFUNCTION(BlueprintCallable, Category = "Grid")
-	FVector CellCoordToWorldLocation(FIntVector GridCoord) const;
-	
-	UFUNCTION(BlueprintCallable, Category = "Grid")
-	FIntVector WorldLocationToCellCoord(FVector WorldLocation) const;
-	
-	UFUNCTION(BlueprintCallable, Category = "Grid")
-	FVector CellCenterAsWorldLocation(FIntVector GridCoord) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	bool IsValidCell(FIntVector GridCoord) const;

@@ -5,17 +5,16 @@
 
 #include "GridTemplate.h"
 #include "InputActionValue.h"
+#include "Gameplay/Grid/GridMath.h"
 #include "Gameplay/Grid/GridUnit.h"
 #include "Gameplay/Subsystem/GridSubsystem.h"
 
 UGridInteractionComponent::UGridInteractionComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.TickInterval = 0.06f;
+	PrimaryComponentTick.TickInterval = 0.05f;
 }
 
-
-// Called when the game starts
 void UGridInteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -61,14 +60,16 @@ void UGridInteractionComponent::PerformMouseClick(const FInputActionValue& Value
 	AActor* HitActor = Hit.GetActor();
 	if (HitActor && HitActor->GetClass()->ImplementsInterface(UGridUnit::StaticClass()))
 	{
-		FIntVector ActorCellCoord = GridSubsystem->WorldLocationToCellCoord(HitActor->GetActorLocation());
+		FIntVector ActorCellCoord = UGridMath::WorldLocationToCellCoord(HitActor->GetActorLocation(), 
+			GridSubsystem->GetGridOrigin(), GridSubsystem->GetCellSize(), GridSubsystem->GetActiveLayer());
 		LastClickedCell = ActorCellCoord;
 		OnUnitClicked.Broadcast(HitActor);
 		return;
 	}
 	
 	// If Clicked Cell
-	FIntVector CellCoord = GridSubsystem->WorldLocationToCellCoord(Hit.Location);
+	FIntVector CellCoord = UGridMath::WorldLocationToCellCoord(Hit.Location, 
+			GridSubsystem->GetGridOrigin(), GridSubsystem->GetCellSize(), GridSubsystem->GetActiveLayer());
 	if (GridSubsystem->IsValidCell(CellCoord))
 	{
 		LastClickedCell = CellCoord;
@@ -92,7 +93,8 @@ void UGridInteractionComponent::PerformGridHovering() {
 		return;
 	}
 	
-	FIntVector CellCoord = GridSubsystem->WorldLocationToCellCoord(Hit.Location); 
+	FIntVector CellCoord = UGridMath::WorldLocationToCellCoord(Hit.Location, 
+			GridSubsystem->GetGridOrigin(), GridSubsystem->GetCellSize(), GridSubsystem->GetActiveLayer());
 	if (CellCoord != LastHoveredCell)
 	{
 		if (GridSubsystem->IsValidCell(CellCoord))
@@ -133,7 +135,6 @@ bool UGridInteractionComponent::PerformGridLineTrace(FHitResult& OutHitResult) c
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(GetOwner());
 	
-	// ECC_Visibility는 추후 Grid 전용 콜리전 채널로 변경해야 함.
 	return GetWorld()->LineTraceSingleByChannel(
 		OutHitResult,
 		WorldLocation,

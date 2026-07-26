@@ -6,9 +6,8 @@
 #include "CellDisplayStateData.generated.h"
 
 /**
- * 
+ * Define DisplayState and Priority of Cell
  */
-// Define DisplayState and Priority of Cell
 UENUM(BlueprintType, meta=(ScriptName="CellDisplayStateEnum"))
 enum class ECellDisplayState: uint8
 {

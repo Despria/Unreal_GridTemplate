@@ -5,6 +5,14 @@
 #include "CoreMinimal.h"
 #include "GridCellData.generated.h"
 
+UENUM(BlueprintType)
+enum class ETerrainType : uint8
+{
+	Ground = 0,   // 기본 보행 지형 — 별도 이동 능력 불필요
+	Water  = 1,   // bCanSwim 또는 bCanFly 필요
+	Air    = 2,   // bCanFly 필요 (허공, 낭떠러지 등 — 기존 bRequiresFlying 대체)
+};
+
 USTRUCT(BlueprintType)
 struct FGridCellData
 {
@@ -18,9 +26,6 @@ struct FGridCellData
 	UPROPERTY(BlueprintReadWrite)
 	FVector CellWorldLocation = FVector(0, 0, 0);
 	
-	UPROPERTY(BlueprintReadWrite)
-	float HeightOffset = 0.f;
-	
 	// MovementCost Minimum = 10
 	UPROPERTY(BlueprintReadWrite)
 	int32 MovementCost = 10;
@@ -31,6 +36,10 @@ struct FGridCellData
 	UPROPERTY(BlueprintReadWrite)
 	bool bIsOccupied = false;
 	
+	// 지형 종류 (기존 bIsWaterTerrain, bRequiresFlying 대체)
 	UPROPERTY(BlueprintReadWrite)
-	TArray<FIntVector> ExtraMovableCells = TArray<FIntVector>();
+	ETerrainType TerrainType = ETerrainType::Ground;
+	
+	UPROPERTY(BlueprintReadWrite)
+	TMap<FIntVector, int32> ExtraMovableCells = TMap<FIntVector, int32>();
 };

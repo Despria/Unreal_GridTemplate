@@ -20,11 +20,14 @@ public class GridTemplate : ModuleRules
 			"UMG",
 			"Slate"
 		});
-
-		PrivateDependencyModuleNames.AddRange(new string[]
+		if (Target.bBuildEditor)
 		{
-			
-		});
+			PrivateDependencyModuleNames.AddRange(new string[]
+			{
+				"UnrealEd", // 에디터 전용 API
+				"EditorScriptingUtilities" // UEditorAssetLibrary
+			});
+		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"GridTemplate",

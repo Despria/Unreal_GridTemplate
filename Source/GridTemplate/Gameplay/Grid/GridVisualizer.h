@@ -33,10 +33,6 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Setup")
     FVector GridOrigin = FVector::ZeroVector;
-    
-    // ── 게임용: 레벨 전체 그리드 평면 ───────────────────
-    // 현재 Opaque 머티리얼 사용, 추후 Deferred Decal로 전환 예정
-    // ActiveLayer 전환 시 Z 위치를 LayerBaseHeights[ActiveLayer]로 이동
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Mesh")
     TObjectPtr<UStaticMeshComponent> GridMeshComponent;
@@ -45,14 +41,13 @@ public:
     TObjectPtr<UMaterialInterface> GridMaterial;
 
     // 각 셀의 상태를 표시할 ISM
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|ISM")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|ISM")
     TObjectPtr<UInstancedStaticMeshComponent> ISM_CellDisplayState;
 
     // ISM에 사용할 셀 크기 평면 메쉬
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|ISM")
     TObjectPtr<UStaticMesh> CellMesh;
 
-    // ── 게임용: ISM 갱신 함수 ────────────────────────────
     // GridManager 델리게이트에 바인딩
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
     void OnInitializedGrid();
@@ -105,73 +100,11 @@ public:
     void UpdateGridMaterial();
     virtual void UpdateGridMaterial_Implementation();
     
-    // ── 층 전환 처리 ─────────────────────────────────────
-    // OnActiveLayerChanged 델리게이트 수신 시 호출
-    // 그리드 평면 Z 이동 + ISM 전체 초기화
-
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Layers")
     void HandleActiveLayerChanged(int32 NewLayer);
     virtual void HandleActiveLayerChanged_Implementation(int32 NewLayer);
-    
-    // ── 디버그용 설정 ────────────────────────────────────
-    // bShowDebugCoords: 기본값 false, 개발 중에만 ON
-    // ActiveLayer에 해당하는 셀만 필터링하여 표시
-    
-    // 각 셀의 상태를 표시할 ISM
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|ISM")
-    TObjectPtr<UInstancedStaticMeshComponent> ISM_CellDebug;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid|Debug")
-    bool bShowDebugCells = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-    bool bShowDebugCoords = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-    FLinearColor DebugTextColor = FLinearColor::Yellow;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-    float DebugTextDuration = -1.f;   // -1 = 무한 유지
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-    float DebugTextZOffset = 10.f;    // 바닥에 묻히지 않도록 Z축 오프셋
-    
-    // ── 디버그 함수 ──────────────────────────────────────
-    // ShowDebugCoords: ActiveLayer 셀만 필터링하여 DrawDebugString
-    // 에디터 모드: 자체 변수(CellSize/Width/Height/GridOrigin)로 직접 계산
-    // PIE 모드: GridManager 데이터 사용
-    
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
-    void ToggleDebugCellCoords();
-    virtual void ToggleDebugCellCoords_Implementation();
-
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
-    void InitializeDebugCoords();
-    virtual void InitializeDebugCoords_Implementation();
-    
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
-    void ToggleDebugCoords();
-    virtual void ToggleDebugCoords_Implementation();
-
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
-    void ClearDebugCoords();
-    virtual void ClearDebugCoords_Implementation();
-
-    // 에디터 디테일 패널 버튼으로 노출 (PIE 없이 에디터에서 직접 실행)
-    UFUNCTION(CallInEditor, Category = "Grid|Debug")
-    void InitializeDebugCoordsInEditor();
-    
-    UFUNCTION(CallInEditor, Category = "Grid|Debug")
-    void ToggleDebugCoordsInEditor();
-
-    UFUNCTION(CallInEditor, Category = "Grid|Debug")
-    void ClearDebugCoordsInEditor();
 
 private:
-    // ── 내부 참조 ────────────────────────────────────────
-    // BeginPlay 시 GetWorld()->GetSubsystem<UGridManager>()로 캐싱
-    // 에디터 모드에서는 nullptr일 수 있으므로 항상 IsValid() 체크 필요
-    
     UPROPERTY()
     TObjectPtr<UGridSubsystem> GridSubsystem;
     
@@ -193,9 +126,56 @@ private:
     UFUNCTION(BlueprintCallable, Category = "Grid|Visual", meta=(AllowPrivateAccess=true))
     void RefreshGridCellDisplayState(FIntVector CellCoord);
 
+    
+#pragma region Debug
+public:
+    // ── 디버그용 설정 ────────────────────────────────────
+    // bShowDebugCoords: 기본값 false, 개발 중에만 ON
+    // ActiveLayer에 해당하는 셀만 필터링하여 표시
+    
+    // 각 셀의 상태를 표시할 ISM
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|ISM")
+    TObjectPtr<UInstancedStaticMeshComponent> ISM_CellDebug;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+    FLinearColor DebugTextColor = FLinearColor::Yellow;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+    float DebugTextDuration = -1.f;   // -1 = 무한 유지
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+    float DebugTextZOffset = 10.f;    // 바닥에 묻히지 않도록 Z축 오프셋
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void InitializeDebugCellInstances();
+    virtual void InitializeDebugCellInstances_Implementation();
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void ClearDebugCellInstances();
+    virtual void ClearDebugCellInstances_Implementation();
+
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void InitializeDebugCoords();
+    virtual void InitializeDebugCoords_Implementation();
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|Debug")
+    void ClearDebugCoords();
+    virtual void ClearDebugCoords_Implementation();
+
+    UFUNCTION(CallInEditor, Category = "Grid|Debug")
+    void InitializeDebugCellInstancesInEditor();
+    
+    UFUNCTION(CallInEditor, Category = "Grid|Debug")
+    void ClearDebugCellInstancesInEditor();
+    
+    UFUNCTION(CallInEditor, Category = "Grid|Debug")
+    void InitializeDebugCoordsInEditor();
+    
+    UFUNCTION(CallInEditor, Category = "Grid|Debug")
+    void ClearDebugCoordsInEditor();
+
+private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug", meta=(AllowPrivateAccess=true))
     TArray<TObjectPtr<class ATextRenderActor>> DebugCellCoords;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug", meta=(AllowPrivateAccess=true))
-    bool bIsShowingDebugCoords = false;
+#pragma endregion 
 };

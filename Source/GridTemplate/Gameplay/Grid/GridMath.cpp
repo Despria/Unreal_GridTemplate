@@ -21,7 +21,7 @@ FVector UGridMath::CellCoordToWorldLocation(FIntVector CellCoord, FVector GridOr
 		// 언리얼의 좌표계는 Y축이 좌/우, X축이 앞/뒤를 가리키므로, 서로 변환해서 반환해야 함.
 		GridOrigin.X + (CellCoord.Y * CellSize),
 		GridOrigin.Y + (CellCoord.X * CellSize),
-		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
+		GridOrigin.Z + LayerZ
 	);
 }
 
@@ -41,7 +41,7 @@ FVector UGridMath::CellCenterToWorldLocation(FIntVector CellCoord, FVector GridO
 	return FVector(
 		GridOrigin.X + (CellCoord.Y * CellSize) + (CellSize * 0.5f),
 		GridOrigin.Y + (CellCoord.X * CellSize) + (CellSize * 0.5f),
-		GridOrigin.Z + LayerZ + 0.f  // HeightOffset은 SetCellHeightOffset으로 별도 설정
+		GridOrigin.Z + LayerZ
 	);
 }
 

@@ -3,22 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GridContributor.h"
+#include "GridContributorBase.h"
+#include "GridUnit.h"
 #include "GameFramework/Actor.h"
-#include "GridTerrain.generated.h"
+#include "GridContributorUnitSpawn.generated.h"
 
 UCLASS()
-class GRIDTEMPLATE_API AGridTerrain : public AActor, public IGridContributor
+class GRIDTEMPLATE_API AGridContributorUnitSpawn : public AGridContributorBase
 {
 	GENERATED_BODY()
 	
 public:	
-	AGridTerrain();
+	AGridContributorUnitSpawn();
 
 protected:
 	virtual void BeginPlay() override;
 
 public:	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Build")
+	TScriptInterface<IGridUnit> UnitToSpawn;
+	
 	virtual TArray<FIntVector> GetAffectedCellCoords() override;
 	virtual bool Apply() override;
 

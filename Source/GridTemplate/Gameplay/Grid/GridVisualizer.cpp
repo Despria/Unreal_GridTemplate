@@ -26,20 +26,30 @@ AGridVisualizer::AGridVisualizer()
 	ISM_CellDisplayState->SetupAttachment(GetRootComponent());
 	ISM_CellDisplayState->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ISM_CellDisplayState->SetGenerateOverlapEvents(false);
+	ISM_CellDisplayState->SetCastShadow(false);
 	
 	ISM_CellDebug = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ISM_Cell_Debug"));
 	ISM_CellDebug->SetupAttachment(GetRootComponent());
 	ISM_CellDebug->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ISM_CellDebug->SetGenerateOverlapEvents(false);
+	ISM_CellDebug->SetCastShadow(false);
 }
 
 void AGridVisualizer::BeginPlay()
 {
+	Super::BeginPlay();
+	
 	GridSubsystem = GetWorld()->GetSubsystem<UGridSubsystem>();
 	if (GridSubsystem)
 	{
 		GridSubsystem->OnInitializedGrid.AddDynamic(this, &AGridVisualizer::OnInitializedGrid);
 		GridSubsystem->OnActiveLayerChanged.AddDynamic(this, &AGridVisualizer::HandleActiveLayerChanged);
+		
+		// If GridSubsystem already initialized
+		if (GridSubsystem->bIsGridInitialized)
+		{
+			OnInitializedGrid();
+		}
 	}
 	
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -98,15 +108,21 @@ void AGridVisualizer::OnInitializedGrid_Implementation()
 		(FTransform(UGridMath::CellCoordToWorldLocation
 			(CellCoords[i], GridOrigin, CellSize, GridSubsystem->GetLayerBaseHeights())
 			+ FVector(0, 0, ISM_ZOffset)));
+		// ISM_ZOffset 더해주는 부분에서 각 Cell의 HeightOffset도 같이 더해주는 것이 좋지 않을지?
+		// 그런데 GridSubsystem의 GridCells TMap은 외부에서 건드리는 것을 막기 위해 private으로 선언되어 있음.
+		// 이를 유지하면서 읽기 전용의 FGridCellData만 반환하는 함수를 만드는 것이 좋을 듯 한데...
 		GridCellDisplayStates.Add(CellCoords[i], FCellDisplayStateData(ECellDisplayState::Blank, InstanceID));
 	}
+	UE_LOG(LogTemp, Warning, TEXT("GridCellDisplayStates Length: %d"), GridCellDisplayStates.Num());
 	
 	InitGridMesh();
 }
 
 void AGridVisualizer::InitGridMesh_Implementation()
 {
-	
+	// 현재 하나의 셀 단위로 사용하고 있는 스태틱 메시의 스케일을 조정
+	// LayerBaseHeights의 키의 개수만큼 생성, ActiveLayer에 해당하는 메시하고만 상호작용이 되도록 해야 하나?
+	// 그런데 GridVisualizer의 책임과는 좀 다른 것 같기도 하고? 하지만 해당 메시가 있어야 시각적 상호작용이 될테니 그냥 둬도 될 것 같기도 하고?
 }
 
 // Set DisplayState(ECellDisplayState) to Cell
@@ -238,15 +254,8 @@ void AGridVisualizer::HandleActiveLayerChanged_Implementation(int32 NewLayer)
 	
 }
 
-void AGridVisualizer::ToggleDebugCellCoords_Implementation()
+void AGridVisualizer::InitializeDebugCellInstances_Implementation()
 {
-	bShowDebugCells = !bShowDebugCells;
-	if (!bShowDebugCells)
-	{
-		ISM_CellDebug->ClearInstances();
-		return;
-	}
-	
 	AActor* Actor = UGameplayStatics::GetActorOfClass(GetWorld(), AGridSettings::StaticClass());
 	if (!Actor)
 	{
@@ -263,11 +272,15 @@ void AGridVisualizer::ToggleDebugCellCoords_Implementation()
 	
 	for (int i = 0; i < GridCellCoords.Num(); i++)
 	{
-		int32 InstanceID = ISM_CellDebug->AddInstance
-		(FTransform(UGridMath::CellCoordToWorldLocation
+		ISM_CellDebug->AddInstance(FTransform(UGridMath::CellCoordToWorldLocation
 			(GridCellCoords[i], GridSettings->GetGridOrigin(), GridSettings->GetCellSize(), GridSettings->GetLayerBaseHeights())
 			+ FVector(0, 0, ISM_ZOffset)));
 	};
+}
+
+void AGridVisualizer::ClearDebugCellInstances_Implementation()
+{
+	ISM_CellDebug->ClearInstances();
 }
 
 void AGridVisualizer::InitializeDebugCoords_Implementation()
@@ -286,7 +299,7 @@ void AGridVisualizer::InitializeDebugCoords_Implementation()
 	TArray<FIntVector> GridCellCoords;
 	GridCellData.GenerateKeyArray(GridCellCoords);
 	
-	DebugCellCoords.Empty();
+	if (!DebugCellCoords.IsEmpty()) ClearDebugCoords();
 	for (int i = 0; i < GridCellCoords.Num(); i++)
 	{
 		FActorSpawnParameters ActorSpawnParams;
@@ -303,39 +316,38 @@ void AGridVisualizer::InitializeDebugCoords_Implementation()
 		DebugCellCoord->GetTextRender()->SetWorldSize(16.f);
 		DebugCellCoord->SetActorEnableCollision(false);
 		DebugCellCoord->GetTextRender()->Text = 
-			FText::FromString(FString::Format(TEXT("X = {0}\nY = {1}\nZ = {2}"),
-				{GridCellCoords[i].X, GridCellCoords[i].Y, GridCellCoords[i].Z }));
+			FText::FromString(FString::Format(TEXT("X = {0}\nY = {1}\nZ = {2}\nMovementCost = {3}"),
+		{GridCellCoords[i].X, GridCellCoords[i].Y, GridCellCoords[i].Z,
+							GridCellData[GridCellCoords[i]].MovementCost }));
 		DebugCellCoords.Add(DebugCellCoord);
 	};
-}
-
-void AGridVisualizer::ToggleDebugCoords_Implementation()
-{
-	bIsShowingDebugCoords = !bIsShowingDebugCoords;
-	for (int i = 0; i < DebugCellCoords.Num(); i++)
-	{
-		DebugCellCoords[i]->SetActorHiddenInGame(bIsShowingDebugCoords);
-	}
 }
 
 void AGridVisualizer::ClearDebugCoords_Implementation()
 {
 	for (int i = DebugCellCoords.Num() - 1; i >= 0; i--)
 	{
-		DebugCellCoords.RemoveAt(i);
+		if (IsValid(DebugCellCoords[i]))
+		{
+			DebugCellCoords[i]->Destroy();
+		}
 	}
 	DebugCellCoords.Empty();
-	bIsShowingDebugCoords = false;
+}
+
+void AGridVisualizer::InitializeDebugCellInstancesInEditor()
+{
+	InitializeDebugCellInstances();
+}
+
+void AGridVisualizer::ClearDebugCellInstancesInEditor()
+{
+	ClearDebugCellInstances();
 }
 
 void AGridVisualizer::InitializeDebugCoordsInEditor()
 {
 	InitializeDebugCoords();
-}
-
-void AGridVisualizer::ToggleDebugCoordsInEditor()
-{
-	ToggleDebugCoords();
 }
 
 void AGridVisualizer::ClearDebugCoordsInEditor()

@@ -31,6 +31,26 @@ struct FGridCellPathfindData
 	FIntVector FromCell = FIntVector(INT_MIN, INT_MIN, INT_MIN);
 };
 
+USTRUCT(BlueprintType)
+struct FGridTraversalParams
+{
+	GENERATED_BODY()
+	
+	// 대각선 이동 허용 여부 (Euclidean vs Manhattan)
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsDiagonal = false;
+	
+	// 통과 가능한 지형의 비트마스크. (1 << ETerrainType 값)의 OR 조합.
+	// 기본값 1 = (1 << ETerrainType::Ground) → 기본 보행 지형만 통과 가능.
+	// 새 지형(ETerrainType 값 추가) 대응 시 이 마스크에 명시적으로 비트를 추가해야만 통과 가능 (fail-closed).
+	UPROPERTY(BlueprintReadWrite, meta = (Bitmask, BitmaskEnum = "ETerrainType"))
+	int32 TraversableTerrainMask = 1 << static_cast<int32>(ETerrainType::Ground);
+	
+	// true면 bIsOccupied 셀을 통과(경유)할 수 있음. 단, 정지는 IsCellStoppable에서 항상 불가 처리됨.
+	UPROPERTY(BlueprintReadWrite)
+	bool bCanPassOccupied = false;
+};
+
 UENUM(Blueprintable)
 enum class EEffectRangeType : uint8
 {
@@ -93,11 +113,14 @@ class GRIDTEMPLATE_API UGridSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 	
 public:
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
+	
+	bool bIsGridInitialized = false;
 
 #pragma region Cell Properties
 
@@ -147,9 +170,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Layers")
 	void SetActiveLayer(int32 NewLayer);
 	
-	UFUNCTION(BlueprintCallable, Category = "Grid|Layers")
-	void SetCellHeightOffset(FIntVector GridCoord, float NewHeightOffset);
-	
 private:
 	UPROPERTY(BlueprintReadWrite, Category = "Grid", meta = (AllowPrivateAccess=true))
 	TMap<FIntVector, FGridCellData> GridCells;
@@ -160,17 +180,23 @@ private:
 #pragma region A* Pathfinding
 public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding")
-	TArray<FIntVector> AlphaStarPathfinding(FIntVector StartCoord, FIntVector EndCoord, bool bIsDiagonal);
+	TArray<FIntVector> GetAlphaStarPathToTargetCoord(FIntVector StartCoord, FIntVector TargetCoord, const FGridTraversalParams& TraversalParams);
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding|MoveRange")
-	TArray<FIntVector> GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint, bool bIsDiagonal);
+	TArray<FIntVector> GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint, const FGridTraversalParams& TraversalParams);
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding|EffectRange")
 	TArray<FIntVector> GetEffectRangeCellCoords(FEffectRangeData& EffectRangeData);
 	
 private:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding", meta=(AllowPrivateAccess=true))
-	TArray<FIntVector> GetNeighborCellCoords(FIntVector CellCoord, bool bIsDiagonal);
+	TMap<FIntVector, int32> GetReachableCellCoords(FIntVector CellCoord, const FGridTraversalParams& TraversalParams);
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding", meta=(AllowPrivateAccess=true))
+	bool IsCellTraversable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding", meta=(AllowPrivateAccess=true))
+	bool IsCellStoppable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Grid|Pathfinding", meta=(AllowPrivateAccess=true))
 	int32 CalculateHCost(FIntVector CellCoord, FIntVector TargetCoord, bool bIsDiagonal);

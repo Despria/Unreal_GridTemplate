@@ -5,10 +5,15 @@
 #include "Algo/Reverse.h"
 #include "Kismet/GameplayStatics.h"
 
+void UGridSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	InitializeGrid();
+}
+
 void UGridSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	InitializeGrid();
 }
 
 void UGridSubsystem::Deinitialize()
@@ -18,7 +23,6 @@ void UGridSubsystem::Deinitialize()
 
 void UGridSubsystem::InitializeGrid()
 {
-	// AGridSettings로부터 정보 읽어와서 초기화 하도록 수정해야 함.
 	if (AActor* Actor = UGameplayStatics::GetActorOfClass(GetWorld(), AGridSettings::StaticClass()))
 	{
 		AGridSettings* GridSettings = Cast<AGridSettings>(Actor);
@@ -27,8 +31,20 @@ void UGridSubsystem::InitializeGrid()
 		GridYLength = GridSettings->GetGridYLength();
 		GridOrigin = GridSettings->GetGridOrigin();
 		GridCells = GridSettings->GetGridCellData();
+		if (GridCells.IsEmpty())
+		{
+			UE_LOG(LogTemp, Error, TEXT("UGridSubsystem::GridCells is Not Properly Initiailized!!"));
+		}
 		LayerBaseHeights = GridSettings->GetLayerBaseHeights();
+		
+		UE_LOG(LogTemp, Warning, TEXT("GridCells Length: %d"), GridCells.Num());
+		
 		OnInitializedGrid.Broadcast();
+		bIsGridInitialized = true;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UGridSubsystem::GridSetting Not FOUND!!"));
 	}
 }
 
@@ -50,11 +66,6 @@ void UGridSubsystem::SetActiveLayer(int32 NewLayer)
 	ActiveLayer = NewLayer;
 }
 
-void UGridSubsystem::SetCellHeightOffset(FIntVector GridCoord, float NewHeightOffset)
-{
-	GridCells[GridCoord].HeightOffset = NewHeightOffset;
-}
-
 bool UGridSubsystem::IsValidLayer(int32 Layer) const
 {
 	return LayerBaseHeights.Find(Layer);
@@ -65,13 +76,18 @@ bool UGridSubsystem::IsValidLayer(int32 Layer) const
 /**
  * Find Path(FIntVector Array) From StartCoord to EndCoord.
  * @param StartCoord Starting Point
- * @param EndCoord Target Point
+ * @param TargetCoord Target Point
  * @param bIsDiagonal Defines whether it is Euclidean Distance(Allow Diagonal Movement) or Manhattan Distance(Only Straight Movement).
  * @return Path from StartCoord to EndCoord. Empty TArray if no Path found.
  */
-TArray<FIntVector> UGridSubsystem::AlphaStarPathfinding(FIntVector StartCoord, FIntVector EndCoord, bool bIsDiagonal)
+TArray<FIntVector> UGridSubsystem::GetAlphaStarPathToTargetCoord(FIntVector StartCoord, FIntVector TargetCoord, const FGridTraversalParams& TraversalParams)
 {
-	// Initialize A* Pathfinding
+	// If TargetCoord is Unstoppable, No need to find Path
+	if (!IsCellStoppable(TargetCoord, TraversalParams))
+	{
+		return TArray<FIntVector>();
+	}
+	
 	TMap<FIntVector, FGridCellPathfindData> PathfindCells = TMap<FIntVector, FGridCellPathfindData>();
 	TSet<FIntVector> OpenCellCoords = TSet<FIntVector>();
 	TSet<FIntVector> ClosedCellCoords = TSet<FIntVector>();
@@ -83,17 +99,15 @@ TArray<FIntVector> UGridSubsystem::AlphaStarPathfinding(FIntVector StartCoord, F
 	OpenCellCoords.Add(SearchCellCoord);
 	
 	PathfindCells[StartCoord].GCost = 0;
-	PathfindCells[StartCoord].HCost = CalculateHCost(SearchCellCoord, EndCoord, bIsDiagonal);
+	PathfindCells[StartCoord].HCost = CalculateHCost(SearchCellCoord, TargetCoord, TraversalParams.bIsDiagonal);
 	PathfindCells[StartCoord].FCost = PathfindCells[SearchCellCoord].GCost + PathfindCells[SearchCellCoord].HCost;
 	
-	// Search until path is found, or OpenCellCoords become empty.
 	while (!OpenCellCoords.IsEmpty())
 	{
-		// Get LowestCellCoord from OpenCellCoords
 		SearchCellCoord = GetLowestFCostCellCoord(OpenCellCoords, PathfindCells);
-		if (IsTargetCoord(SearchCellCoord, EndCoord))
+		if (IsTargetCoord(SearchCellCoord, TargetCoord))
 		{
-			FIntVector RouteCellCoord = EndCoord;
+			FIntVector RouteCellCoord = TargetCoord;
 			
 			TArray<FIntVector> Path;
 			Path.Add(RouteCellCoord);
@@ -109,30 +123,31 @@ TArray<FIntVector> UGridSubsystem::AlphaStarPathfinding(FIntVector StartCoord, F
 		OpenCellCoords.Remove(SearchCellCoord);
 		ClosedCellCoords.Add(SearchCellCoord);
 		
-		TArray<FIntVector> NeighborCellCoords = GetNeighborCellCoords(SearchCellCoord, bIsDiagonal);
-		for (int i = 0; i < NeighborCellCoords.Num(); i++)
+		TMap<FIntVector, int32> NeighborCellCoords = GetReachableCellCoords(SearchCellCoord, TraversalParams);
+		for (const TPair<FIntVector, int32>& Neighbor : NeighborCellCoords)
 		{
-			if (ClosedCellCoords.Contains(NeighborCellCoords[i])) continue;
+			if (ClosedCellCoords.Contains(Neighbor.Key)) continue;
 			
 			FGridCellPathfindData NewCellPathfindData = FGridCellPathfindData();
-			NewCellPathfindData.CellCoord = NeighborCellCoords[i];
+			NewCellPathfindData.CellCoord = Neighbor.Key;
 			NewCellPathfindData.FromCell = SearchCellCoord;
-			NewCellPathfindData.GCost = PathfindCells[SearchCellCoord].GCost + GridCells[NeighborCellCoords[i]].MovementCost;
+			NewCellPathfindData.GCost = PathfindCells[SearchCellCoord].GCost + Neighbor.Value;
 			
-			bool bIsNewCell = !OpenCellCoords.Contains(NeighborCellCoords[i]);
-			if (bIsNewCell || NewCellPathfindData.GCost < PathfindCells[NeighborCellCoords[i]].GCost)
+			bool bIsNewCell = !OpenCellCoords.Contains(Neighbor.Key);
+			if (bIsNewCell || NewCellPathfindData.GCost < PathfindCells[Neighbor.Key].GCost)
 			{
-				NewCellPathfindData.HCost = CalculateHCost(NeighborCellCoords[i], EndCoord, bIsDiagonal);NewCellPathfindData.FCost = NewCellPathfindData.GCost + NewCellPathfindData.HCost;
-				PathfindCells.Add(NeighborCellCoords[i], NewCellPathfindData);
-				if (!OpenCellCoords.Contains(NeighborCellCoords[i]))
+				NewCellPathfindData.HCost = CalculateHCost(Neighbor.Key, TargetCoord, TraversalParams.bIsDiagonal);
+				NewCellPathfindData.FCost = NewCellPathfindData.GCost + NewCellPathfindData.HCost;
+				PathfindCells.Add(Neighbor.Key, NewCellPathfindData);
+				if (!OpenCellCoords.Contains(Neighbor.Key))
 				{
-					OpenCellCoords.Add(NeighborCellCoords[i]);
+					OpenCellCoords.Add(Neighbor.Key);
 				}
 			}
 		}
 	}
 	
-	// No path found until OpenCellCoords become empty, which means there is no path to EndCoord(TargetCoord).
+	// No path found until OpenCellCoords become empty, which means there is no path to TargetCoord.
 	return TArray<FIntVector>();
 }
 
@@ -143,7 +158,7 @@ TArray<FIntVector> UGridSubsystem::AlphaStarPathfinding(FIntVector StartCoord, F
  * @param bIsDiagonal Defines whether it is Euclidean Distance(Allow Diagonal Movement) or Manhattan Distance(Only Straight Movement).
  * @return Movable Range. Empty if no movable range found.
  */
-TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint, bool bIsDiagonal)
+TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoord, int32 MovementPoint, const FGridTraversalParams& TraversalParams)
 {
 	TMap<FIntVector, FGridCellPathfindData> PathfindCells = TMap<FIntVector, FGridCellPathfindData>();
 	TSet<FIntVector> OpenCellCoords = TSet<FIntVector>();
@@ -164,31 +179,40 @@ TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoo
 		OpenCellCoords.Remove(SearchCellCoord);
 		ClosedCellCoords.Add(SearchCellCoord);
 		
-		TArray<FIntVector> NeighborCellCoords = GetNeighborCellCoords(SearchCellCoord, bIsDiagonal);
-		for (int i = 0; i < NeighborCellCoords.Num(); i++)
+		TMap<FIntVector, int32> NeighborCellCoords = GetReachableCellCoords(SearchCellCoord, TraversalParams);
+		for (const TPair<FIntVector, int32>& Neighbor : NeighborCellCoords)
 		{
-			if (ClosedCellCoords.Contains(NeighborCellCoords[i])) continue;
-			
+			if (ClosedCellCoords.Contains(Neighbor.Key)) continue;
+    
 			FGridCellPathfindData NewCellPathfindData = FGridCellPathfindData();
-			NewCellPathfindData.CellCoord = NeighborCellCoords[i];
+			NewCellPathfindData.CellCoord = Neighbor.Key;
 			NewCellPathfindData.FromCell = SearchCellCoord;
-			NewCellPathfindData.GCost = PathfindCells[SearchCellCoord].GCost + GridCells[NeighborCellCoords[i]].MovementCost;
+			NewCellPathfindData.GCost = PathfindCells[SearchCellCoord].GCost + Neighbor.Value;  // ← 동일하게 변경
 			NewCellPathfindData.FCost = NewCellPathfindData.GCost;
-			
-			// 기존 경로보다 나은 지 비교해서 GCost를 갱신해주어야 범위 내의 Cell들을 정확히 반환할 수 있음.
-			bool bIsNewCell = !OpenCellCoords.Contains(NeighborCellCoords[i]);
+    
+			bool bIsNewCell = !OpenCellCoords.Contains(Neighbor.Key);
 			if (NewCellPathfindData.GCost <= MovementPoint &&
-				(bIsNewCell || NewCellPathfindData.GCost < PathfindCells[NeighborCellCoords[i]].GCost))
+				(bIsNewCell || NewCellPathfindData.GCost < PathfindCells[Neighbor.Key].GCost))
 			{
-				PathfindCells.Add(NeighborCellCoords[i], NewCellPathfindData);
-				if (!OpenCellCoords.Contains(NeighborCellCoords[i]))
+				PathfindCells.Add(Neighbor.Key, NewCellPathfindData);
+				if (!OpenCellCoords.Contains(Neighbor.Key))
 				{
-					OpenCellCoords.Add(NeighborCellCoords[i]);
+					OpenCellCoords.Add(Neighbor.Key);
 				}
 			}
 		}
 	}
-	return ClosedCellCoords.Array();
+	
+	// 반환 직전: 정지 가능한 칸만 필터링. StartCoord(유닛 본인 위치)는 예외적으로 항상 포함.
+	TArray<FIntVector> StoppableCells;
+	for (const FIntVector& Cell : ClosedCellCoords)
+	{
+		if (Cell == StartCoord || IsCellStoppable(Cell, TraversalParams))
+		{
+			StoppableCells.Add(Cell);
+		}
+	}
+	return StoppableCells;
 }
 
 /**
@@ -197,37 +221,52 @@ TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoo
  * @param bIsDiagonal Defines whether it is Euclidean Distance(Allow Diagonal Movement) or Manhattan Distance(Only Straight Movement).
  * @return 
  */
-TArray<FIntVector> UGridSubsystem::GetNeighborCellCoords(FIntVector CellCoord, bool bIsDiagonal)
+TMap<FIntVector, int32> UGridSubsystem::GetReachableCellCoords(FIntVector CellCoord, const FGridTraversalParams& TraversalParams)
 {
-	TArray<FIntVector> NeighborCells;
+	TMap<FIntVector, int32> NeighborCells;
+	
+	// 1. ExtraMovableCells
+	for (const TPair<FIntVector, int32>& ExtraMovable : GridCells[CellCoord].ExtraMovableCells)
+	{
+		if (IsCellTraversable(ExtraMovable.Key, TraversalParams))
+		{
+			NeighborCells.Add(ExtraMovable.Key, ExtraMovable.Value);
+		}
+	}
+	
+	// 2. Get NeighborCells
 	static const TArray<FIntVector> StraightNeighborCellCoords = 
 	{
 		FIntVector(1, 0, 0), FIntVector(0, 1, 0),
 		FIntVector(-1, 0, 0), FIntVector(0, -1, 0)
 	};
-	
 	for (int i = 0; i < StraightNeighborCellCoords.Num(); i++)
 	{
-		if (IsValidCell(CellCoord + StraightNeighborCellCoords[i]))
+		const FIntVector Neighbor = CellCoord + StraightNeighborCellCoords[i];
+		if (IsCellTraversable(Neighbor, TraversalParams))
 		{
-			NeighborCells.Add(CellCoord + StraightNeighborCellCoords[i]);
+			NeighborCells.Add(Neighbor, GridCells[Neighbor].MovementCost);
 		}
 	}
-	if (!bIsDiagonal) return NeighborCells;
 	
-	static const TArray<FIntVector> DiagonalNeighborCellCoords = 
+	// NeighborCell (Diagonal)
+	if (TraversalParams.bIsDiagonal)
 	{
-		FIntVector(1, 1, 0), FIntVector(1, -1, 0),
-		FIntVector(-1, 1, 0), FIntVector(-1, -1, 0)
-	};
-	
-	for (int i = 0; i < DiagonalNeighborCellCoords.Num(); i++)
-	{
-		if (IsValidCell(CellCoord + DiagonalNeighborCellCoords[i]))
+		static const TArray<FIntVector> DiagonalNeighborCellCoords = 
 		{
-			NeighborCells.Add(CellCoord + DiagonalNeighborCellCoords[i]);
+			FIntVector(1, 1, 0), FIntVector(1, -1, 0),
+			FIntVector(-1, 1, 0), FIntVector(-1, -1, 0)
+		};
+		for (int i = 0; i < DiagonalNeighborCellCoords.Num(); i++)
+		{
+			const FIntVector Neighbor = CellCoord + DiagonalNeighborCellCoords[i];
+			if (IsCellTraversable(Neighbor, TraversalParams))
+			{
+				NeighborCells.Add(Neighbor, GridCells[Neighbor].MovementCost);
+			}
 		}
 	}
+	
 	return NeighborCells;
 }
 
@@ -281,6 +320,42 @@ FIntVector UGridSubsystem::GetLowestFCostCellCoord(TSet<FIntVector>& OpenCellCoo
 		}
 	}
 	return LowestCellCoord;
+}
+
+/**
+ * 
+ * @param CellCoord 
+ * @param TraversalParams 
+ * @return 
+ */
+bool UGridSubsystem::IsCellTraversable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const
+{
+	if (!IsValidCell(CellCoord)) return false;
+	
+	const FGridCellData& CellData = GridCells[CellCoord];
+	
+	if (!CellData.bIsWalkable) return false;
+	
+	const int32 CellTerrainBit = 1 << static_cast<int32>(CellData.TerrainType);
+	if ((TraversalParams.TraversableTerrainMask & CellTerrainBit) == 0) return false;
+	
+	if (CellData.bIsOccupied && !TraversalParams.bCanPassOccupied) return false;
+	
+	return true;
+}
+
+/**
+ * Find if CellCoord is Stoppable. Even if Unit can pass through occupied Cell, it cannot Stop on occupied Cell.
+ * @param CellCoord 
+ * @param TraversalParams 
+ * @return 
+ */
+bool UGridSubsystem::IsCellStoppable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const
+{
+	if (!IsCellTraversable(CellCoord, TraversalParams)) return false;
+	if (GridCells[CellCoord].bIsOccupied) return false;
+    
+	return true;
 }
 
 /**

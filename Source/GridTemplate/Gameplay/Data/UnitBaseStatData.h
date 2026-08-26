@@ -12,7 +12,7 @@ struct FUnitManaTypeData : public FUnitBaseStatData
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Unit|Status|Combat")
-	int32 BaseManaPoint;
+	int32 BaseManaPoint = 0;
 };
 
 USTRUCT(BlueprintType)
@@ -21,5 +21,5 @@ struct FUnitStaminaTypeData : public FUnitBaseStatData
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Unit|Status|Combat")
-	int32 BaseStaminaPoint;
+	int32 BaseStaminaPoint = 0;
 };

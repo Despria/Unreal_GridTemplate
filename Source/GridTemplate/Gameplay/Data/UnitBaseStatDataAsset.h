@@ -45,8 +45,6 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite, Category = "Grid|Unit|Status|Combat")
 	int32 BaseAttackPoint;
-	UPROPERTY(BlueprintReadWrite, Category = "Grid|Unit|Status|Combat")
-	TArray<TSoftObjectPtr<UDataAsset>> Spells;
 	
 	UPROPERTY(BlueprintReadWrite, Category = "Grid|Unit|Status|Combat")
 	int32 BaseDefencePoint;
@@ -122,7 +120,7 @@ struct FUnitBaseStatData
 		if (!UnitBaseStatDataAsset) return;
 		
 		UnitName = UnitBaseStatDataAsset->UnitName;
-		BaseHitPoint = UnitBaseStatDataAsset->BaseActionSpeed;
+		BaseHitPoint = UnitBaseStatDataAsset->BaseHitPoint;
 		BaseAttackPoint = UnitBaseStatDataAsset->BaseAttackPoint;
 		BaseDefencePoint = UnitBaseStatDataAsset->BaseDefencePoint;
 		BaseActionSpeed = UnitBaseStatDataAsset->BaseActionSpeed;
@@ -131,6 +129,7 @@ struct FUnitBaseStatData
 		bIsFlyable = UnitBaseStatDataAsset->bIsFlyable;
 		bIsSwimmable = UnitBaseStatDataAsset->bIsSwimmable;
 		StatusEffect = UnitBaseStatDataAsset->StatusEffect;
-		Spells = UnitBaseStatDataAsset->Spells;
+		
+		// 구조를 유닛을 매개변수로 받아서 유닛 데이터를 초기화 하는 것으로 변경해야 할 듯
 	}
 };

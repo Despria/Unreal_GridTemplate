@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "GridUnit.generated.h"
 
+class IItem;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI, BlueprintType)
 class UGridUnit : public UInterface
@@ -19,9 +21,14 @@ class UGridUnit : public UInterface
 class GRIDTEMPLATE_API IGridUnit
 {
 	GENERATED_BODY()
-
+	
 public:
 	UFUNCTION(Category = "Grid|Unit")
+	virtual bool IsInteractable() const;
+
+#pragma region Movement
+public:
+	UFUNCTION(Category = "Grid|Unit|Movement")
 	virtual FIntVector GetCellCoord() const;
 
 	UFUNCTION(Category = "Grid|Unit|Movement")
@@ -29,7 +36,10 @@ public:
 	
 	UFUNCTION(Category = "Grid|Unit|Movement")
 	virtual bool IsDiagonalMovable() const;
+#pragma endregion 
+	
+#pragma region Item
+public:
 
-	UFUNCTION(Category = "Grid|Unit")
-	virtual bool IsInteractable() const;
+#pragma endregion 
 };

@@ -3,12 +3,16 @@
 #include "Gameplay/Subsystem/GridSubsystem.h"
 #include "Gameplay/Grid/GridSettings.h"
 #include "Algo/Reverse.h"
+#include "Gameplay/ActorComponent/GridInteractionComponent.h"
+#include "Gameplay/Grid/GridUnitBase.h"
 #include "Kismet/GameplayStatics.h"
 
 void UGridSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
+	
 	InitializeGrid();
+	BindInteractionEvents();
 }
 
 void UGridSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -216,7 +220,7 @@ TArray<FIntVector> UGridSubsystem::GetMovableRangeCellCoords(FIntVector StartCoo
 }
 
 /**
- * Get All Neighboring CellCoords of CellCoord. Neglects if Neighboring CellCoord does not exist or unreachable.
+ * Get All Neighboring CellCoords and ExtraMovableCells of CellCoord. Neglects if Neighboring CellCoord does not exist or unreachable.
  * @param CellCoord CellCoord to find its neighbors.
  * @param bIsDiagonal Defines whether it is Euclidean Distance(Allow Diagonal Movement) or Manhattan Distance(Only Straight Movement).
  * @return 
@@ -323,10 +327,10 @@ FIntVector UGridSubsystem::GetLowestFCostCellCoord(TSet<FIntVector>& OpenCellCoo
 }
 
 /**
- * 
- * @param CellCoord 
- * @param TraversalParams 
- * @return 
+ * Check if Cell is traversable
+ * @param CellCoord Cell to check
+ * @param TraversalParams Travel Data
+ * @return Is Traversable?
  */
 bool UGridSubsystem::IsCellTraversable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const
 {
@@ -346,9 +350,9 @@ bool UGridSubsystem::IsCellTraversable(FIntVector CellCoord, const FGridTraversa
 
 /**
  * Find if CellCoord is Stoppable. Even if Unit can pass through occupied Cell, it cannot Stop on occupied Cell.
- * @param CellCoord 
- * @param TraversalParams 
- * @return 
+ * @param CellCoord Cell to check
+ * @param TraversalParams Travel Data
+ * @return Is Stoppable?
  */
 bool UGridSubsystem::IsCellStoppable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const
 {
@@ -599,3 +603,94 @@ TArray<FIntVector> UGridSubsystem::GetBresenhamLine(FIntVector Start, FIntVector
 	return Line;
 }
 #pragma endregion 
+
+#pragma region Unit Selection / Movement Input
+void UGridSubsystem::BindInteractionEvents()
+{
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UGridSubsystem::BindInteractionEvents - PlayerController NOT FOUND!!"));
+		return;
+	}
+ 
+	GridInteractionComponent = PC->FindComponentByClass<UGridInteractionComponent>();
+	if (!GridInteractionComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UGridSubsystem::BindInteractionEvents - GridInteractionComponent NOT FOUND!!"));
+		return;
+	}
+ 
+	GridInteractionComponent->OnUnitClicked.AddDynamic(this, &UGridSubsystem::HandleUnitClicked);
+	GridInteractionComponent->OnCellClicked.AddDynamic(this, &UGridSubsystem::HandleCellClicked);
+}
+ 
+void UGridSubsystem::UnbindInteractionEvents()
+{
+	if (GridInteractionComponent)
+	{
+		GridInteractionComponent->OnUnitClicked.RemoveDynamic(this, &UGridSubsystem::HandleUnitClicked);
+		GridInteractionComponent->OnCellClicked.RemoveDynamic(this, &UGridSubsystem::HandleCellClicked);
+		GridInteractionComponent = nullptr;
+	}
+}
+ 
+// 유닛 클릭 시: 선택 + 이동 가능 범위 계산 및 브로드캐스트.
+// 다른 유닛을 선택 중이었다면 SelectedUnit이 새 유닛으로 교체되며 범위도 재계산됨(별도 처리 불필요).
+void UGridSubsystem::HandleUnitClicked(AActor* HitActor)
+{
+	AGridUnitBase* Unit = Cast<AGridUnitBase>(HitActor);
+	if (!Unit || !Unit->IsInteractable())
+	{
+		return;
+	}
+ 
+	SelectedUnit = Unit;
+ 
+	FGridTraversalParams TraversalParams;
+	TraversalParams.bIsDiagonal = Unit->IsDiagonalMovable();
+	// TraversableTerrainMask / bCanPassOccupied는 현재 기본값(지상 지형만 통과, 점유 셀 통과 불가) 사용.
+	// 유닛별 비행/수영 등 지형 통과 특성은 IGridUnit 인터페이스 확장 후 반영 필요.
+ 
+	CurrentMovableRangeCells = GetMovableRangeCellCoords(
+		Unit->GetCellCoord(), Unit->GetMovementPoints(), TraversalParams);
+ 
+	OnMoveableRangeUpdated.Broadcast(CurrentMovableRangeCells);
+}
+ 
+// 셀 클릭 시: 선택된 유닛이 있고, 클릭한 셀이 이동 가능 범위 내라면 경로 계산 후 이동 명령.
+// 범위 밖 클릭 시 선택 해제(다시 유닛부터 클릭해야 함).
+void UGridSubsystem::HandleCellClicked(FIntVector CellCoord)
+{
+	if (!SelectedUnit)
+	{
+		return;
+	}
+ 
+	if (!CurrentMovableRangeCells.Contains(CellCoord))
+	{
+		ClearSelection();
+		return;
+	}
+ 
+	FGridTraversalParams TraversalParams;
+	TraversalParams.bIsDiagonal = SelectedUnit->IsDiagonalMovable();
+ 
+	TArray<FIntVector> Path = GetAlphaStarPathToTargetCoord(
+		SelectedUnit->GetCellCoord(), CellCoord, TraversalParams);
+ 
+	if (!Path.IsEmpty())
+	{
+		SelectedUnit->MoveAlongPath(Path);
+	}
+ 
+	ClearSelection();
+}
+ 
+void UGridSubsystem::ClearSelection()
+{
+	SelectedUnit = nullptr;
+	CurrentMovableRangeCells.Empty();
+	OnSelectionCleared.Broadcast();
+}
+#pragma endregion

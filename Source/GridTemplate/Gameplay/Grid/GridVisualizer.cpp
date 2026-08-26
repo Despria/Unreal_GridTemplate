@@ -44,6 +44,8 @@ void AGridVisualizer::BeginPlay()
 	{
 		GridSubsystem->OnInitializedGrid.AddDynamic(this, &AGridVisualizer::OnInitializedGrid);
 		GridSubsystem->OnActiveLayerChanged.AddDynamic(this, &AGridVisualizer::HandleActiveLayerChanged);
+		GridSubsystem->OnMoveableRangeUpdated.AddDynamic(this, &AGridVisualizer::OnShowMovableRangeHandler);
+		GridSubsystem->OnSelectionCleared.AddDynamic(this, &AGridVisualizer::HandleSelectionCleared);
 		
 		// If GridSubsystem already initialized
 		if (GridSubsystem->bIsGridInitialized)
@@ -90,6 +92,7 @@ void AGridVisualizer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 				this, &AGridVisualizer::OnUnitClickedHandler);
 		}
 	}
+	
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -197,8 +200,16 @@ void AGridVisualizer::RefreshGridCellDisplayState(FIntVector CellCoord)
 
 void AGridVisualizer::OnShowMovableRangeHandler_Implementation(const TArray<FIntVector>& Cells)
 {
-	// 유닛 클릭 시 해당 유닛의 이동 가능 반경을 표시
-	// GridSubsystem의 함수를 호출하여 해당 위치에 ISM_CellDisplayState로 이동 가능 범위를 표시
+	for (const FIntVector& Cell : DisplayedMovableRangeCells)
+	{
+		RemoveCellDisplayState(Cell, ECellDisplayState::MoveRange);
+	}
+
+	for (const FIntVector& Cell : Cells)
+	{
+		SetCellDisplayState(Cell, ECellDisplayState::MoveRange);
+	}
+	DisplayedMovableRangeCells = Cells;
 }
 
 void AGridVisualizer::OnShowEffectRangeHandler_Implementation(const TArray<FIntVector>& Cells)
@@ -242,6 +253,15 @@ void AGridVisualizer::OnUnitClickedHandler_Implementation(AActor* Unit)
 	// 유닛 클릭 시
 	FIntVector UnitCoord = Cast<IGridUnit>(Unit)->GetCellCoord();
 	SetCellDisplayState(UnitCoord, ECellDisplayState::Selected);
+}
+
+void AGridVisualizer::HandleSelectionCleared_Implementation()
+{
+	for (const FIntVector& Cell : DisplayedMovableRangeCells)
+	{
+		RemoveCellDisplayState(Cell, ECellDisplayState::MoveRange);
+	}
+	DisplayedMovableRangeCells.Empty();
 }
 
 void AGridVisualizer::UpdateGridMaterial_Implementation()

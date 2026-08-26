@@ -84,6 +84,10 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
     void OnUnitClickedHandler(AActor* Unit);
     virtual void OnUnitClickedHandler_Implementation(AActor* Unit);
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Grid|ISM")
+    void HandleSelectionCleared();
+    virtual void HandleSelectionCleared_Implementation();
 
     UFUNCTION(BlueprintCallable, Category = "Grid|Visual")
     void SetCellDisplayState(FIntVector CellCoord, ECellDisplayState NewState);
@@ -113,6 +117,8 @@ private:
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     TObjectPtr<UDataTable> CellDisplayColorTable;
+    
+    TArray<FIntVector> DisplayedMovableRangeCells;
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), Category="Grid|ISM")
     float ISM_ZOffset = 1.0f;

@@ -56,18 +56,18 @@ void AGridVisualizer::BeginPlay()
 	
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
-		if (UGridInteractionComponent* InteractionComp =
+		if (UGridInteractionComponent* GridInteractionComponent =
 			PC->FindComponentByClass<UGridInteractionComponent>())
 		{
-			InteractionComp->OnCellClicked.AddDynamic(
+			GridInteractionComponent->OnCellClicked.AddDynamic(
 				this, &AGridVisualizer::OnCellClickedHandler);
-			InteractionComp->OnCellClickExited.AddDynamic(
+			GridInteractionComponent->OnCellClickExited.AddDynamic(
 				this, &AGridVisualizer::OnCellClickExitedHandler);
-			InteractionComp->OnCellHovered.AddDynamic(
+			GridInteractionComponent->OnCellHovered.AddDynamic(
 				this, &AGridVisualizer::OnCellHoveredHandler);
-			InteractionComp->OnCellHoverExited.AddDynamic(
+			GridInteractionComponent->OnCellHoverExited.AddDynamic(
 				this, &AGridVisualizer::OnCellHoverExitedHandler);
-			InteractionComp->OnUnitClicked.AddDynamic(
+			GridInteractionComponent->OnUnitClicked.AddDynamic(
 				this, &AGridVisualizer::OnUnitClickedHandler);
 		}
 	}

@@ -18,11 +18,8 @@ AGridUnitBase::AGridUnitBase()
 void AGridUnitBase::BeginPlay()
 {
 	Super::BeginPlay();
-	// Spawner(SpawnActorDeferred)가 이미 호출했다면 bIsStatInitialized 가드로 인해 아무 일도 하지 않고 반환됨.
-	// 레벨에 직접 배치된 유닛의 경우 여기서 최초로 초기화됨.
+	
 	InitializeUnit();
- 
-	// BeginPlay는 액터 생명주기 동안 정확히 1회만 호출되므로, 초기화 경로(스포너/레벨 배치)와 무관하게 여기서 1회 발행
 	OnUnitSpawned.Broadcast(this);
 }
 
@@ -54,10 +51,7 @@ void AGridUnitBase::Tick(float DeltaTime)
 
 void AGridUnitBase::InitializeUnit()
 {
-	if (bIsStatInitialized)
-	{
-		return;
-	}
+	if (bIsInitialized) return;
  
 	if (!UnitBaseStatDataAsset)
 	{
@@ -66,10 +60,8 @@ void AGridUnitBase::InitializeUnit()
 		Destroy();
 		return;
 	}
- 
 	// 1. 베이스 스탯 반영
 	UnitBaseStatData.InitializeFromBaseStat(UnitBaseStatDataAsset);
- 
 	// 2. 장착 아이템 효과 반영
 	for (const TScriptInterface<IEquipmentItem>& Item : EquippedItems)
 	{
@@ -87,14 +79,15 @@ void AGridUnitBase::InitializeUnit()
 			GridSubsystem->GetGridOrigin(),
 			GridSubsystem->GetCellSize(),
 			GridSubsystem->GetActiveLayer());
+		
+		GridSubsystem->RegisterUnit(this);
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GridUnitBase::InitializeUnit - GridSubsystem is NULL!!"));
 	}
- 
-	bIsStatInitialized = true;
-	// 필요하다면 CurrentCellCoord 1회 초기화
+	
+	bIsInitialized = true;
 }
 
 FIntVector AGridUnitBase::GetCellCoord() const
@@ -143,7 +136,7 @@ void AGridUnitBase::MoveAlongPath(const TArray<FIntVector>& Path)
 	}
  
 	OnUnitMovementStarted.Broadcast(this);
-	AdvanceToNextWaypoint();
+	MoveToNextCellCoord();
 }
  
 void AGridUnitBase::StopMovement()
@@ -153,7 +146,7 @@ void AGridUnitBase::StopMovement()
 	MovePathIndex = INDEX_NONE;
 }
  
-void AGridUnitBase::AdvanceToNextWaypoint()
+void AGridUnitBase::MoveToNextCellCoord()
 {
 	if (!GridSubsystem || !MovePath.IsValidIndex(MovePathIndex))
 	{
@@ -208,7 +201,7 @@ bool AGridUnitBase::TickMoveToCell(float DeltaTime)
  
 		if (MovePath.IsValidIndex(MovePathIndex))
 		{
-			AdvanceToNextWaypoint();
+			MoveToNextCellCoord();
 		}
 		else
 		{

@@ -31,9 +31,6 @@ struct FGridCellData
 	int32 MovementCost = 10;
 	
 	UPROPERTY(BlueprintReadWrite)
-	bool bIsWalkable = true;
-	
-	UPROPERTY(BlueprintReadWrite)
 	bool bIsOccupied = false;
 	
 	// 지형 종류 (기존 bIsWaterTerrain, bRequiresFlying 대체)

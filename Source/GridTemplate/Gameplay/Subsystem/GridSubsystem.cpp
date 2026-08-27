@@ -334,15 +334,16 @@ FIntVector UGridSubsystem::GetLowestFCostCellCoord(TSet<FIntVector>& OpenCellCoo
  */
 bool UGridSubsystem::IsCellTraversable(FIntVector CellCoord, const FGridTraversalParams& TraversalParams) const
 {
+	// If Cell is not valid
 	if (!IsValidCell(CellCoord)) return false;
 	
 	const FGridCellData& CellData = GridCells[CellCoord];
 	
-	if (!CellData.bIsWalkable) return false;
-	
+	// If Unit's TraversalParam is not matching with Cell's Terrain Type
 	const int32 CellTerrainBit = 1 << static_cast<int32>(CellData.TerrainType);
 	if ((TraversalParams.TraversableTerrainMask & CellTerrainBit) == 0) return false;
 	
+	// If Cell is already occupied and Unit cannot pass Occupied Cell
 	if (CellData.bIsOccupied && !TraversalParams.bCanPassOccupied) return false;
 	
 	return true;
@@ -602,9 +603,22 @@ TArray<FIntVector> UGridSubsystem::GetBresenhamLine(FIntVector Start, FIntVector
 
 	return Line;
 }
+
+
 #pragma endregion 
 
-#pragma region Unit Selection / Movement Input
+#pragma region Unit / Unit Selection & Movement
+void UGridSubsystem::RegisterUnit(AGridUnitBase* Unit)
+{
+	Unit->OnUnitReachedCell.AddDynamic(this, &UGridSubsystem::HandleUnitReachedCell);
+	Unit->OnUnitDestroyed.AddDynamic(this, &UGridSubsystem::HandleUnitDestroyed);
+	
+	FIntVector UnitCellCoord = Unit->GetCellCoord();
+	if (IsValidCell(UnitCellCoord)) GridCells[UnitCellCoord].bIsOccupied = true;
+	
+	CurrentUnits.Add(Unit);
+}
+
 void UGridSubsystem::BindInteractionEvents()
 {
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
@@ -634,6 +648,20 @@ void UGridSubsystem::UnbindInteractionEvents()
 		GridInteractionComponent = nullptr;
 	}
 }
+
+void UGridSubsystem::HandleUnitDestroyed(AGridUnitBase* Unit)
+{
+	FIntVector UnitCellCoord = Unit->GetCellCoord();
+	if (IsValidCell(UnitCellCoord)) GridCells[UnitCellCoord].bIsOccupied = false;
+	
+	CurrentUnits.Remove(Unit);
+}
+
+void UGridSubsystem::HandleUnitReachedCell(AGridUnitBase* Unit, FIntVector PreviousCellCoord, FIntVector NewCellCoord)
+{
+	if (IsValidCell(PreviousCellCoord)) GridCells[PreviousCellCoord].bIsOccupied = false;
+	if (IsValidCell(NewCellCoord)) GridCells[NewCellCoord].bIsOccupied = true;
+}
  
 // 유닛 클릭 시: 선택 + 이동 가능 범위 계산 및 브로드캐스트.
 // 다른 유닛을 선택 중이었다면 SelectedUnit이 새 유닛으로 교체되며 범위도 재계산됨(별도 처리 불필요).
@@ -662,11 +690,7 @@ void UGridSubsystem::HandleUnitClicked(AActor* HitActor)
 // 범위 밖 클릭 시 선택 해제(다시 유닛부터 클릭해야 함).
 void UGridSubsystem::HandleCellClicked(FIntVector CellCoord)
 {
-	if (!SelectedUnit)
-	{
-		return;
-	}
- 
+	if (!SelectedUnit) return;
 	if (!CurrentMovableRangeCells.Contains(CellCoord))
 	{
 		ClearSelection();
@@ -679,14 +703,11 @@ void UGridSubsystem::HandleCellClicked(FIntVector CellCoord)
 	TArray<FIntVector> Path = GetAlphaStarPathToTargetCoord(
 		SelectedUnit->GetCellCoord(), CellCoord, TraversalParams);
  
-	if (!Path.IsEmpty())
-	{
-		SelectedUnit->MoveAlongPath(Path);
-	}
+	if (!Path.IsEmpty()) SelectedUnit->MoveAlongPath(Path);
  
 	ClearSelection();
 }
- 
+
 void UGridSubsystem::ClearSelection()
 {
 	SelectedUnit = nullptr;

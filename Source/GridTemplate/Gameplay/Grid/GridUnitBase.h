@@ -64,7 +64,7 @@ public:
 	FOnUnitDestroyed OnUnitDestroyed;
  
 private:
-	bool bIsStatInitialized = false;
+	bool bIsInitialized = false;
 #pragma endregion
  
 #pragma region Grid Movement
@@ -110,7 +110,7 @@ protected:
 	bool TickMoveToCell(float DeltaTime);
  
 	// MovePathIndex가 가리키는 다음 웨이포인트의 월드 좌표를 계산하고 이동 시작
-	void AdvanceToNextWaypoint();
+	void MoveToNextCellCoord();
  
 private:
 	// 유닛이 현재 "점유"하고 있다고 판정되는 셀 좌표.

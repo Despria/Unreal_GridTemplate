@@ -231,24 +231,27 @@ private:
 	TArray<FIntVector> GetBresenhamLine(FIntVector Start, FIntVector End);
 #pragma endregion
 	
-#pragma region Unit Selection / Movement Input
-	// GridInteractionComponent의 클릭 이벤트를 구독하여, "유닛 선택 → 이동 범위 표시 → 범위 내 셀 클릭 시 이동"
-	// 흐름을 처리함. 입력 레이어(GridInteractionComponent)는 "무엇이 클릭됐는가"만 알리고,
-	// 실제 게임 규칙 판단(선택 상태, 이동 가능 여부)은 여기(로직 레이어)에서 담당.
+#pragma region Unit / Unit Selection & Movement
+public:
+	UFUNCTION(BlueprintCallable, Category = "Grid|Unit")
+	void RegisterUnit(AGridUnitBase* Unit);
+	
+	
 private:
-	// OnWorldBeginPlay에서 호출. 이 시점엔 PlayerController/GridInteractionComponent의 BeginPlay가
-	// 이미 끝난 상태이므로 안전하게 FindComponentByClass 가능.
 	void BindInteractionEvents();
 	void UnbindInteractionEvents();
  
-	// 유닛 클릭 시: 선택 + 이동 가능 범위 계산 및 브로드캐스트
 	UFUNCTION()
 	void HandleUnitClicked(AActor* HitActor);
  
-	// 셀 클릭 시: 선택된 유닛이 있고 클릭한 셀이 이동 범위 내라면 경로 계산 후 이동 명령.
-	// 범위 밖 클릭 시 선택 해제.
 	UFUNCTION()
 	void HandleCellClicked(FIntVector CellCoord);
+	
+	UFUNCTION()
+	void HandleUnitReachedCell(AGridUnitBase* Unit, FIntVector PreviousCellCoord, FIntVector NewCellCoord);
+	
+	UFUNCTION()
+	void HandleUnitDestroyed(AGridUnitBase* Unit);
  
 	void ClearSelection();
  

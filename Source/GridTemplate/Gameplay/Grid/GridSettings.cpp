@@ -70,7 +70,7 @@ void AGridSettings::BuildGridCellData() const
 					COLLISION_GRID,
 					CollisionQueryParams
 				);
-				if (!HitResult.bBlockingHit) GridCellData.bIsWalkable = false;
+				if (!HitResult.bBlockingHit) GridCellData.TerrainType = ETerrainType::Air;
 				UE_LOG(LogTemp, Warning, TEXT("Grid Traced!"));
 				
 				GridCells.Add(CellCoordOnGrid, GridCellData);
